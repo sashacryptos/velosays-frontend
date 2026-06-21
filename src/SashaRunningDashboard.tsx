@@ -1,6 +1,5 @@
 import React from 'react';
 
-// 💡 核心型別直接定義在這裡，並 export 給 App.tsx 引入
 export interface Activity {
   id: string;
   user_id: string;
@@ -21,13 +20,9 @@ interface Props {
 }
 
 export const SashaRunningDashboard: React.FC<Props> = ({ activities }) => {
-  // 計算週跑量（這裡先撈取最近 4 筆的總和作為動態週跑量示意）
   const totalDistance = activities.slice(0, 4).reduce((sum, act) => sum + Number(act.distance || 0), 0);
-  
-  // 取得最新一筆跑步紀錄作為英雄大卡片的動態呈現
   const latestActivity = activities[0];
 
-  // 格式化時間（將總秒數轉為 分:秒）
   const formatDuration = (totalSeconds: number) => {
     const mins = Math.floor(totalSeconds / 60);
     const secs = totalSeconds % 60;
@@ -35,13 +30,8 @@ export const SashaRunningDashboard: React.FC<Props> = ({ activities }) => {
   };
 
   return (
-    <div className="app" style={{
-      display: 'grid',
-      gridTemplateColumns: '248px minmax(0, 1fr)',
-      minHeight: '100vh',
-      color: 'var(--text)',
-      background: 'radial-gradient(circle at 78% 0%, rgba(255, 95, 158, 0.12), transparent 32rem), linear-gradient(180deg, #0b0b0e 0%, #070709 36%, #050506 100%)'
-    }}>
+    /* 💡 使用專屬 class 打破 Tailwind 全域干擾 */
+    <div className="dashboard-container">
       
       {/* 左側 Sidebar 側邊欄 */}
       <aside className="sidebar">
@@ -84,10 +74,10 @@ export const SashaRunningDashboard: React.FC<Props> = ({ activities }) => {
           </div>
         </header>
 
-        <section className="grid">
+        <section className="dashboard-grid">
           <div className="column">
             
-            {/* 核心英雄大卡片：動態讀取 Supabase 的第一筆數據 */}
+            {/* 核心英雄大卡片 */}
             <article className="card hero-card">
               <div className="card-header">
                 <div>
@@ -146,7 +136,7 @@ export const SashaRunningDashboard: React.FC<Props> = ({ activities }) => {
               </div>
             </article>
 
-            {/* 下半部兩大欄：歷史數據與最近紀錄列表 */}
+            {/* 下半部：歷史數據與最近紀錄 */}
             <div className="split">
               <article className="card">
                 <div className="card-header">
@@ -165,7 +155,6 @@ export const SashaRunningDashboard: React.FC<Props> = ({ activities }) => {
                 </div>
               </article>
 
-              {/* 動態循環渲染：將 Supabase 裡面的所有跑步動態悉數畫出卡片 */}
               <article className="card">
                 <div className="card-header">
                   <div>
@@ -193,7 +182,7 @@ export const SashaRunningDashboard: React.FC<Props> = ({ activities }) => {
             </div>
           </div>
 
-          {/* 右側側邊欄課表群 */}
+          {/* 右側側邊欄課表 */}
           <aside className="column">
             <article className="card">
               <div className="card-header">
