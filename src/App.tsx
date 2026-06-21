@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from './supabaseClient';
 import { SashaRunningDashboard } from './SashaRunningDashboard';
-import type { Activity } from './SashaRunningDashboard'; // 👈 加上 type，完美符合最嚴格語法規範！
+import type { Activity } from './SashaRunningDashboard';
 
 function App() {
   const [activities, setActivities] = useState<Activity[]>([]);
