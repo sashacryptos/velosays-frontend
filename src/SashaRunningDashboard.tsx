@@ -1,6 +1,6 @@
 import React from 'react';
-import { Calendar, Clock, Heart, Zap, Move, Trophy } from 'lucide-react';
 
+// 💡 核心型別直接定義在這裡，並 export 給 App.tsx 引入
 export interface Activity {
   id: string;
   user_id: string;
@@ -21,102 +21,220 @@ interface Props {
 }
 
 export const SashaRunningDashboard: React.FC<Props> = ({ activities }) => {
+  // 計算週跑量（這裡先撈取最近 4 筆的總和作為動態週跑量示意）
+  const totalDistance = activities.slice(0, 4).reduce((sum, act) => sum + Number(act.distance || 0), 0);
+  
+  // 取得最新一筆跑步紀錄作為英雄大卡片的動態呈現
+  const latestActivity = activities[0];
+
+  // 格式化時間（將總秒數轉為 分:秒）
   const formatDuration = (totalSeconds: number) => {
-    const hrs = Math.floor(totalSeconds / 3600);
-    const mins = Math.floor((totalSeconds % 3600) / 60);
+    const mins = Math.floor(totalSeconds / 60);
     const secs = totalSeconds % 60;
-    return `${hrs > 0 ? hrs + '小時' : ''}${mins}分${secs}秒`;
+    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-6 bg-slate-50 min-h-screen text-slate-800">
-      {/* 頂部 Header 區塊 */}
-      <div className="mb-8 border-b border-slate-200 pb-5">
-        <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
-          🏃 VeloSays 跑步教練平台
-        </h1>
-        <div className="flex flex-wrap items-center gap-2 mt-2">
-          <span className="text-sm font-semibold bg-orange-100 text-orange-600 px-3 py-0.5 rounded-full flex items-center gap-1">
-            <Trophy className="w-3.5 h-3.5" /> Strava 數據即時連線
-          </span>
-          <p className="text-sm text-slate-500">| 學員 Sasha 的金澤馬拉松備戰日誌</p>
+    <div className="app" style={{
+      display: 'grid',
+      gridTemplateColumns: '248px minmax(0, 1fr)',
+      minHeight: '100vh',
+      color: 'var(--text)',
+      background: 'radial-gradient(circle at 78% 0%, rgba(255, 95, 158, 0.12), transparent 32rem), linear-gradient(180deg, #0b0b0e 0%, #070709 36%, #050506 100%)'
+    }}>
+      
+      {/* 左側 Sidebar 側邊欄 */}
+      <aside className="sidebar">
+        <div className="brand">
+          <div className="brand-mark">R</div>
+          <div>
+            <p className="brand-title">RunForm AI</p>
+            <p className="brand-subtitle">Adaptive marathon coach</p>
+          </div>
         </div>
-      </div>
 
-      {/* 如果 Supabase 剛好沒撈到資料的防呆畫面 */}
-      {activities.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center shadow-sm">
-          <p className="text-slate-400 font-medium text-lg">目前資料庫連線正常，正在等待同步首錶動態...</p>
-          <p className="text-xs text-slate-400 mt-2">（若持續看到此畫面，請檢查 Supabase Table 資料是否已成功從 Strava 寫入）</p>
+        <nav className="nav" aria-label="主選單">
+          <div className="nav-item active"><span className="nav-icon">⌁</span>今日教練</div>
+          <div className="nav-item"><span className="nav-icon">↗</span>歷史數據</div>
+          <div className="nav-item"><span className="nav-icon">◎</span>訓練課表</div>
+          <div className="nav-item"><span className="nav-icon">✦</span>AI 對話</div>
+          <div className="nav-item"><span className="nav-icon">◐</span>體能狀態</div>
+          <div className="nav-item"><span className="nav-icon">⚙</span>個人設定</div>
+        </nav>
+
+        <div className="sidebar-footer">
+          <strong>金澤馬拉松</strong>
+          <span>2026/10/25 · 目標 Sub 4:00</span>
         </div>
-      ) : (
-        /* 資料列表 - 真正畫出卡片的地方 */
-        <div className="space-y-6">
-          {activities.map((act) => (
-            <div key={act.id} className="bg-white rounded-2xl shadow-sm border border-slate-100 hover:border-orange-300 hover:shadow-md transition-all duration-300 p-6">
-              {/* 卡片上半部：標題與核心大數字 */}
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-dashed border-slate-100 pb-4 mb-4">
+      </aside>
+
+      {/* 右側主畫面區塊 */}
+      <main className="main">
+        <header className="topbar">
+          <div>
+            <p className="eyebrow">Today Coach Console</p>
+            <h1>今天該跑，但要收著跑。</h1>
+            <p className="topbar-copy">
+              AI 根據昨日間歇、睡眠、恢復狀態與金澤馬目標，自動調整今日訓練。重點不是把課表跑完，而是讓下一次關鍵課表跑得出來。
+            </p>
+          </div>
+          <div className="top-actions">
+            <button className="btn secondary">✦ AI 跑步教練聊天</button>
+            <button className="btn primary">▶ 開始訓練</button>
+          </div>
+        </header>
+
+        <section className="grid">
+          <div className="column">
+            
+            {/* 核心英雄大卡片：動態讀取 Supabase 的第一筆數據 */}
+            <article className="card hero-card">
+              <div className="card-header">
                 <div>
-                  <h3 className="font-bold text-slate-800 text-xl">{act.title || "今日訓練"}</h3>
-                  <div className="flex items-center gap-3 text-xs text-slate-400 mt-1.5">
-                    <span className="inline-flex items-center gap-1 font-medium"><Calendar className="w-3.5 h-3.5" /> {act.date}</span>
-                    <span>•</span>
-                    <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-bold uppercase tracking-wider text-[10px]">{act.source}</span>
+                  <h2 className="card-title">體能狀態與昨日表現</h2>
+                  <p className="card-subtitle">
+                    最近一筆紀錄 · {latestActivity ? `${latestActivity.title || '跑步'} ${latestActivity.distance} km` : '暫無跑步數據'}
+                  </p>
+                </div>
+                <span className="chip hot">恢復中等偏低</span>
+              </div>
+              
+              <div className="card-body">
+                <div className="status-row">
+                  <div className="metric">
+                    <div className="metric-label">週跑量</div>
+                    <div className="metric-value">{totalDistance.toFixed(1)} <small>km</small></div>
+                  </div>
+                  <div className="metric">
+                    <div className="metric-label">昨日均心</div>
+                    <div className="metric-value">{latestActivity?.avg_hr || '--'} <small>bpm</small></div>
+                  </div>
+                  <div className="metric">
+                    <div className="metric-label">昨日時間</div>
+                    <div className="metric-value">{latestActivity ? formatDuration(latestActivity.duration) : '--'} <small>min</small></div>
+                  </div>
+                  <div className="metric">
+                    <div className="metric-label">目標配速</div>
+                    <div className="metric-value">5:41 <small>/km</small></div>
                   </div>
                 </div>
-                
-                <div className="flex items-baseline gap-6 md:text-right">
-                  <div>
-                    <span className="text-4xl font-black text-slate-900 font-mono tracking-tight">{act.distance}</span>
-                    <span className="text-sm font-bold text-slate-400 ml-1">KM</span>
+
+                <div className="health">
+                  <div className="readiness">
+                    <div className="readiness-inner">
+                      <span className="readiness-score">68</span>
+                      <span className="readiness-label">Readiness</span>
+                    </div>
                   </div>
-                  <div className="border-l border-slate-200 pl-6">
-                    <span className="text-3xl font-black text-orange-600 font-mono tracking-tight">{act.pace}</span>
-                    <span className="text-xs font-bold text-slate-400 block mt-0.5">/ 公里配速</span>
+                  <div className="coach-summary">
+                    <div className="summary-line">
+                      <span className="dot"></span>
+                      <div>
+                        <strong>昨日檢討</strong>
+                        <span>最新配速為 {latestActivity?.pace || '--'}/km。後段心率上揚偏快，代表疲勞正在累積。睡眠不足時，不建議今天再堆強度。</span>
+                      </div>
+                    </div>
+                    <div className="summary-line">
+                      <span className="dot"></span>
+                      <div>
+                        <strong>今日策略</strong>
+                        <span>改為 40 分鐘恢復跑，配速 6:45-7:20/km，心率維持 Z1-Z2。若起跑 10 分鐘仍覺得沉，直接改快走。</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
+            </article>
 
-              {/* 卡片下半部：四大專業大數據面板 */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="bg-slate-50 rounded-xl p-3.5 flex items-center gap-3">
-                  <div className="p-2.5 bg-blue-50 text-blue-600 rounded-lg"><Clock className="w-4 h-4" /></div>
+            {/* 下半部兩大欄：歷史數據與最近紀錄列表 */}
+            <div className="split">
+              <article className="card">
+                <div className="card-header">
                   <div>
-                    <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">總訓練時間</p>
-                    <p className="font-bold text-slate-700 text-sm mt-0.5">{formatDuration(act.duration)}</p>
+                    <h2 className="card-title">歷史數據</h2>
+                    <p className="card-subtitle">近 4 週訓練負荷</p>
                   </div>
                 </div>
-
-                <div className="bg-slate-50 rounded-xl p-3.5 flex items-center gap-3">
-                  <div className="p-2.5 bg-rose-50 text-rose-600 rounded-lg"><Heart className="w-4 h-4" /></div>
-                  <div>
-                    <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">心率 (Avg/Max)</p>
-                    <p className="font-bold text-slate-700 text-sm mt-0.5">
-                      {act.avg_hr || '--'} <span className="text-xs text-slate-400 font-normal">{act.max_hr ? ` / ${act.max_hr}` : ''}</span>
-                    </p>
+                <div className="card-body">
+                  <div className="bars">
+                    <div className="bar-row"><span>本週</span><div className="bar-track"><div className="bar-fill" style={{ width: '64%' }}></div></div><span>{totalDistance.toFixed(0)} km</span></div>
+                    <div className="bar-row"><span>上週</span><div className="bar-track"><div className="bar-fill" style={{ width: '82%' }}></div></div><span>49 km</span></div>
+                    <div className="bar-row"><span>2 週前</span><div className="bar-track"><div className="bar-fill" style={{ width: '72%' }}></div></div><span>43 km</span></div>
+                    <div className="bar-row"><span>3 週前</span><div className="bar-track"><div className="bar-fill" style={{ width: '58%' }}></div></div><span>35 km</span></div>
                   </div>
                 </div>
+              </article>
 
-                <div className="bg-slate-50 rounded-xl p-3.5 flex items-center gap-3">
-                  <div className="p-2.5 bg-amber-50 text-amber-600 rounded-lg"><Zap className="w-4 h-4" /></div>
+              {/* 動態循環渲染：將 Supabase 裡面的所有跑步動態悉數畫出卡片 */}
+              <article className="card">
+                <div className="card-header">
                   <div>
-                    <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">平均步頻</p>
-                    <p className="font-bold text-slate-700 text-sm mt-0.5">{act.avg_spm ? `${act.avg_spm} spm` : '--'}</p>
+                    <h2 className="card-title">最近紀錄</h2>
+                    <p className="card-subtitle">即時同步自 Supabase 資料庫</p>
                   </div>
                 </div>
-
-                <div className="bg-slate-50 rounded-xl p-3.5 flex items-center gap-3">
-                  <div className="p-2.5 bg-indigo-50 text-indigo-600 rounded-lg"><Move className="w-4 h-4" /></div>
-                  <div>
-                    <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">平均步幅</p>
-                    <p className="font-bold text-slate-700 text-sm mt-0.5">{act.avg_stride_length ? `${act.avg_stride_length} cm` : '--'}</p>
+                <div className="card-body" style={{ maxHeight: '320px', overflowY: 'auto' }}>
+                  <div className="list">
+                    {activities.map((act) => (
+                      <div key={act.id} className="activity">
+                        <div className="activity-date">{act.date.slice(5)}</div>
+                        <div>
+                          <p className="activity-name">{act.title || "今日跑步"}</p>
+                          <span className="activity-meta">
+                            {act.distance} km · {formatDuration(act.duration)} · Avg HR {act.avg_hr || '--'}
+                          </span>
+                        </div>
+                        <div className="pace">{act.pace}/km</div>
+                      </div>
+                    ))}
                   </div>
                 </div>
-              </div>
+              </article>
             </div>
-          ))}
-        </div>
-      )}
+          </div>
+
+          {/* 右側側邊欄課表群 */}
+          <aside className="column">
+            <article className="card">
+              <div className="card-header">
+                <div>
+                  <h2 className="card-title">今日訓練課表</h2>
+                  <p className="card-subtitle">依恢復狀態自動調整</p>
+                </div>
+                <span className="chip">可調整</span>
+              </div>
+              <div className="card-body">
+                <div className="plan">
+                  <div className="plan-main">
+                    <h2>40 分鐘恢復跑</h2>
+                    <p>前 10 分鐘觀察身體反應。若腿部沉重或心率異常偏高，改為 30 分鐘快走加伸展。</p>
+                    <div className="chips">
+                      <span className="chip hot">6:45-7:20/km</span>
+                      <span className="chip">Z1-Z2</span>
+                    </div>
+                  </div>
+                  <button className="btn primary">▶ 開始今日訓練</button>
+                </div>
+              </div>
+            </article>
+
+            <article className="card">
+              <div className="card-header">
+                <div>
+                  <h2 className="card-title">AI 跑步教練</h2>
+                  <p className="card-subtitle">根據目標賽事與最新數據回覆</p>
+                </div>
+              </div>
+              <div className="card-body">
+                <div className="chat-preview">
+                  <div className="bubble ai">昨日訓練已經給到足夠刺激，今天建議降低強度。你現在需要的是吸收，而不是補課。</div>
+                  <button className="btn secondary">✦ 開啟教練聊天</button>
+                </div>
+              </div>
+            </article>
+          </aside>
+        </section>
+      </main>
     </div>
   );
 };

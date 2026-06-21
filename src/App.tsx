@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from './supabaseClient';
 import { SashaRunningDashboard } from './SashaRunningDashboard';
-import type { Activity } from './SashaRunningDashboard';
+import type { Activity } from './SashaRunningDashboard'; // 💡 從正確的地方引入型別
 
 function App() {
   const [activities, setActivities] = useState<Activity[]>([]);
@@ -28,8 +28,8 @@ function App() {
 
   if (loading) {
     return (
-      <div className="flex h-screen w-screen items-center justify-center bg-slate-50">
-        <p className="text-slate-500 font-medium animate-pulse">正在為 Sasha 載入最新跑步紀錄...</p>
+      <div className="flex h-screen w-screen items-center justify-center bg-[#070709]">
+        <p className="text-slate-400 font-medium animate-pulse text-sm">正在為 Sasha 載入最新跑步紀錄...</p>
       </div>
     );
   }
