@@ -19,13 +19,16 @@ interface Props {
   activities: Activity[];
   onRefresh?: () => void;
   refreshing?: boolean;
+  onOpenCoachChat?: () => void;
 }
 
 export const SashaRunningDashboard: React.FC<Props> = ({
   activities,
   onRefresh,
   refreshing = false,
+  onOpenCoachChat,
 }) => {
+
   const latestActivity = activities[0];
 
   const totalDistance = activities
@@ -73,39 +76,44 @@ export const SashaRunningDashboard: React.FC<Props> = ({
     <div className="dashboard-container">
       <aside className="sidebar">
         <div className="brand">
-          <div className="brand-mark">R</div>
+          <div className="brand-mark">V</div>
           <div>
-            <p className="brand-title">RunForm AI</p>
+            <p className="brand-title">velosays</p>
             <p className="brand-subtitle">Adaptive marathon coach</p>
           </div>
         </div>
 
         <nav className="nav" aria-label="主選單">
-          <div className="nav-item active">
-            <span className="nav-icon">⌁</span>
-            今日教練
-          </div>
-          <div className="nav-item">
-            <span className="nav-icon">↗</span>
-            歷史數據
-          </div>
-          <div className="nav-item">
-            <span className="nav-icon">◎</span>
-            訓練課表
-          </div>
-          <div className="nav-item">
-            <span className="nav-icon">✦</span>
-            AI 對話
-          </div>
-          <div className="nav-item">
-            <span className="nav-icon">◐</span>
-            體能狀態
-          </div>
-          <div className="nav-item">
-            <span className="nav-icon">⚙</span>
-            個人設定
-          </div>
-        </nav>
+            <button className="nav-item active" type="button">
+    <span className="nav-icon">⌁</span>
+    今日教練
+  </button>
+
+  <button className="nav-item" type="button">
+    <span className="nav-icon">↗</span>
+    歷史數據
+  </button>
+
+  <button className="nav-item" type="button">
+    <span className="nav-icon">◎</span>
+    訓練課表
+  </button>
+
+  <button className="nav-item" type="button" onClick={onOpenCoachChat}>
+    <span className="nav-icon">✦</span>
+    AI 對話
+  </button>
+
+  <button className="nav-item" type="button">
+    <span className="nav-icon">◐</span>
+    體能狀態
+  </button>
+
+  <button className="nav-item" type="button">
+    <span className="nav-icon">⚙</span>
+    個人設定
+  </button>
+</nav>
 
         <div className="sidebar-footer">
           <strong>金澤馬拉松</strong>
@@ -117,7 +125,7 @@ export const SashaRunningDashboard: React.FC<Props> = ({
         <header className="topbar">
           <div>
             <p className="eyebrow">Today Coach Console</p>
-            <h1>今天該跑，但要收著跑。</h1>
+           <h1>velosays</h1>
             <p className="topbar-copy">
               AI 根據昨日訓練、睡眠、恢復狀態與金澤馬目標，自動調整今日訓練。重點不是把課表跑完，而是讓下一次關鍵課表跑得出來。
             </p>
@@ -132,8 +140,8 @@ export const SashaRunningDashboard: React.FC<Props> = ({
               {refreshing ? '同步中...' : '↻ 重新同步'}
             </button>
 
-            <button className="btn secondary">
-              ✦ AI 跑步教練聊天
+            <button className="btn secondary" onClick={onOpenCoachChat}>
+             ✦ AI 跑步教練聊天
             </button>
 
             <button className="btn primary">
@@ -144,7 +152,7 @@ export const SashaRunningDashboard: React.FC<Props> = ({
 
         <section className="dashboard-grid">
           <div className="column">
-            <article className="card hero-card">
+            <article className="card" id="ai-coach">
               <div className="card-header">
                 <div>
                   <h2 className="card-title">體能狀態與昨日表現</h2>
@@ -361,9 +369,9 @@ export const SashaRunningDashboard: React.FC<Props> = ({
                   <div className="bubble ai">
                     可以。30 分鐘 Z1-Z2 更適合目前狀態，結束後加 6 分鐘髖部活動度。
                   </div>
-                  <button className="btn secondary">
-                    ✦ 開啟教練聊天
-                  </button>
+               <button className="btn secondary" onClick={onOpenCoachChat}>
+  ✦ 開啟教練聊天
+</button>
                 </div>
               </div>
             </article>
