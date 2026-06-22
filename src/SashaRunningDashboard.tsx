@@ -47,7 +47,7 @@ export const SashaRunningDashboard: React.FC<Props> = ({
     }
   }, [messages, isChatOpen]);
 
-// 🧠 發送訊息給 GAS Strava 後端 
+// 🧠 發送訊息給 GAS Gemini 後端 (Strava 最終完全體版)
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputMessage.trim() || isSending) return;
@@ -58,15 +58,15 @@ export const SashaRunningDashboard: React.FC<Props> = ({
     setIsSending(true);
 
     try {
-      // 🎯 自動鎖定你提供的最新 GAS Production 網址
-      const syncEndpoint = "https://script.google.com/macros/s/AKfycbzzQ0P8NeTv246BJflQS9bscLw8PtZWE8PM_q5SH4CJUe1QUAU78xbe1wpO8LTnp_cP/exec"; 
+      // 🎯 正式鎖定你提供的真實 Web App API 網址
+      const syncEndpoint = "https://script.google.com/macros/s/AKfycbz-wLhGygelhCBg44bfylb9AR3TmFwUXJ6H2U1pKQ2soONw3YYZQvjKbHh4r1T9LuDw/exec"; 
 
-      // 🚀 專為 Strava 數據架構客製化的對話 Payload
+      // 🚀 發送給 Strava 核心管道的 Payload
       const response = await fetch(syncEndpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          action: 'strava_chat',       // 🎯 標記為 Strava 對話管道，讓後端正確分流
+          action: 'strava_chat',       
           user_id: 'c8f7c70c-7fbd-416d-8dbc-e817bf827e84',
           chat_message: userText,    
           history_context: activities.slice(0, 10).map(act => ({
@@ -76,7 +76,7 @@ export const SashaRunningDashboard: React.FC<Props> = ({
             duration: act.duration,
             date: act.date,
             avg_hr: act.avg_hr,
-            source: 'Strava'          // 標記來源為 Strava
+            source: 'Strava'          
           }))
         })
       });
@@ -91,7 +91,7 @@ export const SashaRunningDashboard: React.FC<Props> = ({
       setMessages(prev => [...prev, { role: 'ai', text: aiReply }]);
     } catch (error) {
       console.error(error);
-      setMessages(prev => [...prev, { role: 'ai', text: '❌ 教練線率異常，請確保 GAS 部署權限已設為「任何人」並綁定 Strava。' }]);
+      setMessages(prev => [...prev, { role: 'ai', text: '❌ 連線成功但回應解析異常，請確保 GAS 部署權限已設為「任何人」並正常執行。' }]);
     } finally {
       setIsSending(false);
     }
