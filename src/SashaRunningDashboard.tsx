@@ -47,7 +47,7 @@ export const SashaRunningDashboard: React.FC<Props> = ({
     }
   }, [messages, isChatOpen]);
 
-  // 🧠 發送訊息給 GAS Gemini 後端
+// 🧠 發送訊息給 GAS Gemini 後端 (終極硬編碼解除變數魔咒版)
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputMessage.trim() || isSending) return;
@@ -58,16 +58,11 @@ export const SashaRunningDashboard: React.FC<Props> = ({
     setIsSending(true);
 
     try {
-      const syncEndpoint = import.meta.env.VITE_SYNC_ENDPOINT;
-      if (!syncEndpoint) {
-        setTimeout(() => {
-          setMessages(prev => [...prev, { role: 'ai', text: '⚠️ 本地環境未配置 VITE_SYNC_ENDPOINT 變數，無法連線至 Gemini 教練大腦。' }]);
-          setIsSending(false);
-        }, 1000);
-        return;
-      }
+      // 💡 終極修正：直接把你的 GAS 網頁應用程式 URL 填在這裡！
+      // ⚠️ 請把下面這串 "https://script.google.com/..." 換成你真正的 GAS 網址
+      const syncEndpoint = "https://script.google.com/macros/s/你的GAS執行序號/exec"; 
 
-      // 將對話連同歷史紀錄上下文一起 POST 給 GAS 後端
+      // 🚀 徹底拿掉原本的 env 判斷與黃色警告，直接暴力出發呼叫後端！
       const response = await fetch(syncEndpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
