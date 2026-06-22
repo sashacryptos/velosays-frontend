@@ -47,7 +47,7 @@ export const SashaRunningDashboard: React.FC<Props> = ({
     }
   }, [messages, isChatOpen]);
 
-// 🧠 發送訊息給 GAS Gemini 後端 (終極硬編碼解除變數魔咒版)
+// 🧠 發送訊息給 GAS Strava 後端 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputMessage.trim() || isSending) return;
@@ -58,25 +58,32 @@ export const SashaRunningDashboard: React.FC<Props> = ({
     setIsSending(true);
 
     try {
-      // 💡 終極修正：直接把你的 GAS 網頁應用程式 URL 填在這裡！
-      // ⚠️ 請把下面這串 "https://script.google.com/..." 換成你真正的 GAS 網址
-      const syncEndpoint = "https://script.google.com/macros/s/你的GAS執行序號/exec"; 
+      // 🎯 自動鎖定你提供的最新 GAS Production 網址
+      const syncEndpoint = "https://script.google.com/macros/s/AKfycbzzQ0P8NeTv246BJflQS9bscLw8PtZWE8PM_q5SH4CJUe1QUAU78xbe1wpO8LTnp_cP/exec"; 
 
-      // 🚀 徹底拿掉原本的 env 判斷與黃色警告，直接暴力出發呼叫後端！
+      // 🚀 專為 Strava 數據架構客製化的對話 Payload
       const response = await fetch(syncEndpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          action: 'sync_activities', 
+          action: 'strava_chat',       // 🎯 標記為 Strava 對話管道，讓後端正確分流
           user_id: 'c8f7c70c-7fbd-416d-8dbc-e817bf827e84',
           chat_message: userText,    
-          history_context: activities.slice(0, 10) 
+          history_context: activities.slice(0, 10).map(act => ({
+            title: act.title,
+            distance: act.distance,
+            pace: act.pace,
+            duration: act.duration,
+            date: act.date,
+            avg_hr: act.avg_hr,
+            source: 'Strava'          // 標記來源為 Strava
+          }))
         })
       });
 
       const resData = await response.json();
       
-      let aiReply = "教練收到！建議今天維持 Z1-Z2 恢復跑心率，穩定吸收昨日的訓練刺激。";
+      let aiReply = "教練收到！看過你的 Strava 數據，建議今天維持 Z1-Z2 恢復跑，穩定吸收昨日的刺激。";
       if (resData.status === "success" && resData.message) {
         aiReply = resData.message;
       }
@@ -84,7 +91,7 @@ export const SashaRunningDashboard: React.FC<Props> = ({
       setMessages(prev => [...prev, { role: 'ai', text: aiReply }]);
     } catch (error) {
       console.error(error);
-      setMessages(prev => [...prev, { role: 'ai', text: '❌ 教練線路異常，請檢查 Google Apps Script 部署狀態。' }]);
+      setMessages(prev => [...prev, { role: 'ai', text: '❌ 教練線率異常，請確保 GAS 部署權限已設為「任何人」並綁定 Strava。' }]);
     } finally {
       setIsSending(false);
     }
