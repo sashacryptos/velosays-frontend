@@ -9,11 +9,8 @@ function App() {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  
-  // 💡 需求 1：新增 activeTab 狀態，預設在 'today' (今日教練)
   const [activeTab, setActiveTab] = useState<string>('today');
 
-  // 1. 撈取 Supabase 資料庫中的跑步歷史數據
   const fetchRunningData = useCallback(async () => {
     const { data, error } = await supabase
       .from('activities')
@@ -29,7 +26,6 @@ function App() {
     setLoading(false);
   }, []);
 
-  // 💡 需求 2：點擊「↻ 重新同步」，呼叫 GAS 一條龍更新，隨後強制 Reload 洗淨畫面
   const handleRefresh = useCallback(async () => {
     if (refreshing) return;
     setRefreshing(true);
@@ -37,9 +33,7 @@ function App() {
     try {
       const syncEndpoint = import.meta.env.VITE_SYNC_ENDPOINT;
 
-      if (!syncEndpoint) {
-        console.warn('⚠️ 未設定 VITE_SYNC_ENDPOINT 環境變數，跳過後端同步。');
-      } else {
+      if (syncEndpoint) {
         await fetch(syncEndpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -47,49 +41,15 @@ function App() {
             action: 'sync_activities',
             user_id: USER_ID,
           }),
-          signal: AbortSignal.timeout(30000) // 30秒安全斷路
-        });
-      }
-
-      await fetchRunningData();
-      // 🚀 強制重新整理頁面，確保活數據全面更新
-      window.location.reload();
-    } catch (error) {
-      console.error('重新同步失敗:', error);
-      alert('同步請求失敗，請檢查網路連線或 GAS 狀態。');
-      setRefreshing(false);
-    }
-  }, [refreshing, fetchRunningData]);
-
-  // 💡 需求 3：點擊 AI 教練打開全新精緻小視窗，直通 Google AI Studio/Gemini 核心
-  const handleOpenCoachChat = useCallback(() => {
-    // 你可以將此網址替換成你的 Gemini 聊天 Web App 網址，或是客製化對話組件
-    const chatUrl = `https://aistudio.google.com/`; 
-    const windowFeatures = "width=450,height=700,resizable=yes,scrollbars=yes,status=yes";
-    
-    // 以優雅的側邊獨立小視窗(Pop-up)形式打開，不干擾主儀表板
-    window.open(chatUrl, "GeminiCoachChat", windowFeatures);
-  }, []);
-
-  // 4. 開始今日訓練
-  const handleStartTraining = useCallback(async () => {
-    if (refreshing) return;
-    setRefreshing(true);
-    try {
-      const syncEndpoint = import.meta.env.VITE_SYNC_ENDPOINT;
-      if (syncEndpoint) {
-        await fetch(syncEndpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'start_training', user_id: USER_ID }),
           signal: AbortSignal.timeout(30000)
         });
       }
-      alert('✅ 訓練已開始！Gemini 課表與追蹤已啟動。');
+
       await fetchRunningData();
       window.location.reload();
     } catch (error) {
-      console.error(error);
+      console.error('重新同步失敗:', error);
+      alert('同步請求失敗。');
       setRefreshing(false);
     }
   }, [refreshing, fetchRunningData]);
@@ -108,17 +68,17 @@ function App() {
     );
   }
 
+// ... 前面的程式碼不變 ...
+
   return (
     <SashaRunningDashboard
       activities={activities}
       onRefresh={handleRefresh}
       refreshing={refreshing}
-      onOpenCoachChat={handleOpenCoachChat}
-      onStartTraining={handleStartTraining}
-      activeTab={activeTab}         // 💡 傳遞當前分頁
-      setActiveTab={setActiveTab}   // 💡 傳遞切換分頁控制
+      activeTab={activeTab}
+      setActiveTab={setActiveTab}
     />
   );
-}
+} // 
 
 export default App;
