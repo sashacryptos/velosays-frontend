@@ -12,19 +12,20 @@ interface CoachProps {
   onTabChange: (tab: NavTab) => void;
   messages: ChatMessage[];
   onAsk: (question: string) => void;
+  sending: boolean;
 }
 
-export function Coach({ activeTab, onTabChange, messages, onAsk }: CoachProps) {
+export function Coach({ activeTab, onTabChange, messages, onAsk, sending }: CoachProps) {
   const [input, setInput] = useState('');
 
   const handleSend = () => {
-    if (!input.trim()) return;
+    if (!input.trim() || sending) return;
     onAsk(input.trim());
     setInput('');
   };
 
   return (
-    <div className="max-w-sm mx-auto bg-white rounded-2xl p-3 flex flex-col gap-2.5">
+    <div className="w-full max-w-md md:max-w-lg mx-auto bg-white rounded-2xl shadow-sm p-3 sm:p-4 flex flex-col gap-2.5">
       <div className="px-1.5 pt-1 pb-0.5">
         <h2 className="text-lg font-medium">AI 教練</h2>
         <p className="text-xs text-gray-400 mt-0.5">根據 Garmin 數據即時分析</p>
@@ -43,6 +44,11 @@ export function Coach({ activeTab, onTabChange, messages, onAsk }: CoachProps) {
             {m.text}
           </div>
         ))}
+        {sending && (
+          <div className="self-start bg-white max-w-[85%] rounded-xl px-3 py-2.5 text-sm text-gray-400 animate-pulse">
+            教練思考中...
+          </div>
+        )}
       </div>
 
       <div className="flex gap-2">
@@ -69,8 +75,8 @@ export function Coach({ activeTab, onTabChange, messages, onAsk }: CoachProps) {
           placeholder="問問今天該怎麼訓練"
           className="border-none flex-1 text-sm bg-transparent outline-none"
         />
-        <button onClick={handleSend} aria-label="送出">
-          <i className="ti ti-send text-base text-blue-600" />
+        <button onClick={handleSend} aria-label="送出" disabled={sending}>
+          <i className={`ti ti-send text-base ${sending ? 'text-gray-300' : 'text-blue-600'}`} />
         </button>
       </div>
 

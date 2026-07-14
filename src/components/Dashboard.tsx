@@ -8,6 +8,7 @@ interface DashboardProps {
   weekly: WeeklyProgress[];
   weeklyGoalKm: number;
   latestRun?: RunSummary;
+  vo2max?: number;
   onViewPlan: () => void;
   onSync: () => void;
   syncing: boolean;
@@ -24,14 +25,14 @@ const StatCard = ({ label, value, unit }: { label: string; value: string; unit: 
 
 const WEEKDAY_ZH = ['日', '一', '二', '三', '四', '五', '六'];
 
-export function Dashboard({ activeTab, onTabChange, weekly, weeklyGoalKm, latestRun, onViewPlan, onSync, syncing }: DashboardProps) {
+export function Dashboard({ activeTab, onTabChange, weekly, weeklyGoalKm, latestRun, vo2max, onViewPlan, onSync, syncing }: DashboardProps) {
   const completedKm = weekly.reduce((sum, d) => sum + d.distanceKm, 0);
   const maxKm = Math.max(...weekly.map((d) => d.distanceKm), 1);
   const now = new Date();
   const todayLabel = `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日 星期${WEEKDAY_ZH[now.getDay()]}`;
 
   return (
-    <div className="max-w-sm mx-auto bg-white rounded-2xl p-3 flex flex-col gap-2.5">
+    <div className="w-full max-w-md md:max-w-lg mx-auto bg-white rounded-2xl shadow-sm p-3 sm:p-4 flex flex-col gap-2.5">
       <div className="flex justify-between items-center px-1.5 pt-1 pb-0.5">
         <div>
           <p className="text-xs text-gray-400">{todayLabel}</p>
@@ -47,24 +48,24 @@ export function Dashboard({ activeTab, onTabChange, weekly, weeklyGoalKm, latest
         </button>
       </div>
 
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
         <StatCard label="最近跑量" value={latestRun ? String(latestRun.distanceKm) : '--'} unit="km" />
         <StatCard label="平均心率" value={latestRun?.avgHeartRate ? String(latestRun.avgHeartRate) : '--'} unit="bpm" />
         <StatCard label="配速" value={latestRun?.paceMinPerKm ?? '--'} unit="/km" />
         <StatCard label="時間" value={latestRun?.durationMin ? String(latestRun.durationMin) : '--'} unit="分" />
       </div>
 
-      <div className="bg-gray-50 rounded-xl p-4 flex items-center gap-3">
-        <div className="w-14 h-14 rounded-full border-[3px] border-purple-400 flex items-center justify-center flex-shrink-0">
-          <span className="text-base font-medium">52</span>
+      {vo2max != null && (
+        <div className="bg-gray-50 rounded-xl p-4 flex items-center gap-3">
+          <div className="w-14 h-14 rounded-full border-[3px] border-purple-400 flex items-center justify-center flex-shrink-0">
+            <span className="text-base font-medium">{vo2max}</span>
+          </div>
+          <div>
+            <p className="text-sm">VO2max</p>
+            <p className="text-xs text-gray-500 mt-0.5">來自 Garmin 每日同步</p>
+          </div>
         </div>
-        <div>
-          <p className="text-sm">
-            VO2max <span className="text-gray-500 font-normal">・優秀等級</span>
-          </p>
-          <p className="text-xs text-gray-500 mt-0.5">近 30 天 +1・持續進步中</p>
-        </div>
-      </div>
+      )}
 
       <div className="bg-gray-50 rounded-xl p-4">
         <p className="text-sm text-gray-500 mb-2.5">本週跑量進度</p>

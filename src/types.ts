@@ -44,11 +44,10 @@ export interface WeeklyProgress {
 }
 
 export interface FitnessMetrics {
-  vo2max: number;
-  vo2maxTrend: number;
+  vo2max?: number;
   trainingLoad: number;
-  restingHeartRate: number;
-  sleepScore: number;
-  recoveryHours: number;
+  restingHeartRate?: number;
+  sleepScore?: number;
+  recoveryHours?: number;
   weeklyLoad: number[];
 }

@@ -15,7 +15,7 @@ export function RunDetail({ activeTab, onTabChange, run, onBack }: RunDetailProp
   const splits = run.splits ?? [];
 
   return (
-    <div className="max-w-sm mx-auto bg-white rounded-2xl p-3 flex flex-col gap-2.5">
+    <div className="w-full max-w-md md:max-w-lg mx-auto bg-white rounded-2xl shadow-sm p-3 sm:p-4 flex flex-col gap-2.5">
       <div className="flex items-center gap-2.5 px-1.5 pt-1 pb-0.5">
         <button onClick={onBack} aria-label="返回">
           <i className="ti ti-arrow-left text-lg text-gray-500" />

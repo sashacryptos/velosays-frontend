@@ -64,6 +64,76 @@ def garmin_login() -> Garmin:
     return client
 
 
+def ensure_profile(client: Garmin) -> None:
+    """token 登入不會載入 profile；睡眠/安靜心率 API 需要 display_name。"""
+    if getattr(client, "display_name", None):
+        return
+    try:
+        garth_client = getattr(client, "garth", None) or client.client
+        profile = garth_client.connectapi("/userprofile-service/socialProfile")
+        client.display_name = profile.get("displayName")
+    except Exception as e:
+        print(f"讀取 profile 失敗（略過需要 display_name 的指標）: {e}")
+
+
+def fetch_daily_metrics(client: Garmin) -> dict | None:
+    """拉當日體能指標；個別失敗不影響其他項目。"""
+    today = date.today().isoformat()
+    metrics: dict = {"user_id": USER_ID, "date": today}
+
+    try:
+        mm = client.get_max_metrics(today)
+        first = mm[0] if isinstance(mm, list) and mm else (mm or {})
+        generic = first.get("generic") or {}
+        vo2 = generic.get("vo2MaxPreciseValue") or generic.get("vo2MaxValue")
+        if vo2:
+            metrics["vo2max"] = float(vo2)
+    except Exception as e:
+        print(f"VO2max 取得失敗: {e}")
+
+    ensure_profile(client)
+    if getattr(client, "display_name", None):
+        try:
+            rhr = client.get_rhr_day(today)
+            values = (
+                ((rhr or {}).get("allMetrics") or {}).get("metricsMap") or {}
+            ).get("WELLNESS_RESTING_HEART_RATE") or []
+            if values and values[0].get("value"):
+                metrics["resting_hr"] = int(values[0]["value"])
+        except Exception as e:
+            print(f"安靜心率取得失敗: {e}")
+
+        try:
+            sleep = client.get_sleep_data(today)
+            score = (
+                (((sleep or {}).get("dailySleepDTO") or {}).get("sleepScores") or {})
+                .get("overall") or {}
+            ).get("value")
+            if score:
+                metrics["sleep_score"] = int(score)
+        except Exception as e:
+            print(f"睡眠分數取得失敗: {e}")
+
+    return metrics if len(metrics) > 2 else None
+
+
+def upsert_daily_metrics(metrics: dict) -> None:
+    res = requests.post(
+        f"{SUPABASE_URL}/rest/v1/daily_metrics",
+        params={"on_conflict": "user_id,date"},
+        headers={**HEADERS, "Prefer": "resolution=merge-duplicates"},
+        json=[metrics],
+        timeout=30,
+    )
+    if res.ok:
+        shown = {k: v for k, v in metrics.items() if k not in ("user_id",)}
+        print(f"體能指標已更新: {shown}")
+    elif res.status_code == 404:
+        print("daily_metrics 表不存在，略過體能指標（請在 Supabase SQL editor 建表）")
+    else:
+        print(f"體能指標寫入失敗 {res.status_code}: {res.text}", file=sys.stderr)
+
+
 def fetch_existing() -> list[dict]:
     res = requests.get(
         f"{SUPABASE_URL}/rest/v1/activities",
@@ -123,6 +193,10 @@ def to_row(activity: dict) -> dict | None:
 
 def main() -> None:
     client = garmin_login()
+
+    metrics = fetch_daily_metrics(client)
+    if metrics:
+        upsert_daily_metrics(metrics)
 
     start = (date.today() - timedelta(days=LOOKBACK_DAYS)).isoformat()
     end = date.today().isoformat()

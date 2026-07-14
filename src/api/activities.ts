@@ -21,6 +21,56 @@ export async function syncActivities(userId: string): Promise<SyncResult> {
   return (await response.json()) as SyncResult;
 }
 
+export interface DailyMetricsRow {
+  date: string;
+  vo2max: number | null;
+  resting_hr: number | null;
+  sleep_score: number | null;
+}
+
+// 由 scripts/sync_garmin.py 每日寫入；表不存在或還沒有資料時回 null
+export async function fetchLatestMetrics(userId: string): Promise<DailyMetricsRow | null> {
+  const { data, error } = await supabase
+    .from('daily_metrics')
+    .select('date,vo2max,resting_hr,sleep_score')
+    .eq('user_id', userId)
+    .order('date', { ascending: false })
+    .limit(1);
+  if (error || !data?.length) return null;
+  return data[0] as DailyMetricsRow;
+}
+
+interface CoachReply {
+  status?: string;
+  message?: string;
+  error?: string;
+}
+
+// 問 AI 教練：帶上最近的跑步紀錄給 GAS 的 Gemini 後端當 context
+export async function askCoach(userId: string, question: string, recentRows: ActivityRow[]): Promise<string> {
+  const response = await fetch(SYNC_ENDPOINT, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({
+      action: 'strava_chat',
+      user_id: userId,
+      chat_message: question,
+      history_context: recentRows.slice(0, 10).map((row) => ({
+        title: row.title,
+        distance: row.distance,
+        pace: row.pace,
+        duration: row.duration,
+        date: row.date,
+        avg_hr: row.avg_hr,
+        source: 'Garmin',
+      })),
+    }),
+  });
+  const data = (await response.json()) as CoachReply;
+  if (data.status === 'success' && data.message) return data.message;
+  throw new Error(data.message || data.error || '教練後端未回覆');
+}
+
 export interface ActivityRow {
   id: string;
   user_id: string;

@@ -11,10 +11,9 @@ const dayLabels = ['一', '二', '三', '四', '五', '六', '日'];
 
 export function FitnessStatus({ activeTab, onTabChange, metrics }: FitnessStatusProps) {
   const maxLoad = Math.max(...metrics.weeklyLoad, 1);
-  const isRecovered = metrics.recoveryHours <= 24;
 
   return (
-    <div className="max-w-sm mx-auto bg-white rounded-2xl p-3 flex flex-col gap-2.5">
+    <div className="w-full max-w-md md:max-w-lg mx-auto bg-white rounded-2xl shadow-sm p-3 sm:p-4 flex flex-col gap-2.5">
       <div className="px-1.5 pt-1 pb-0.5">
         <h2 className="text-lg font-medium">體能狀態</h2>
         <p className="text-xs text-gray-400 mt-0.5">Garmin 每日體能指標</p>
@@ -23,17 +22,17 @@ export function FitnessStatus({ activeTab, onTabChange, metrics }: FitnessStatus
       <div className="grid grid-cols-2 gap-2">
         <div className="bg-gray-50 rounded-xl p-3.5 flex flex-col items-center">
           <div className="w-14 h-14 rounded-full border-[3px] border-purple-400 flex items-center justify-center">
-            <span className="text-base font-medium">{metrics.vo2max}</span>
+            <span className="text-base font-medium">{metrics.vo2max ?? '--'}</span>
           </div>
           <p className="text-xs text-gray-500 mt-2">VO2max</p>
-          <p className="text-[11px] text-gray-400">優秀等級</p>
+          {metrics.vo2max == null && <p className="text-[11px] text-gray-400">等待同步</p>}
         </div>
         <div className="bg-gray-50 rounded-xl p-3.5 flex flex-col items-center">
           <div className="w-14 h-14 rounded-full border-[3px] border-teal-400 flex items-center justify-center">
             <span className="text-base font-medium">{metrics.trainingLoad}</span>
           </div>
-          <p className="text-xs text-gray-500 mt-2">體能負荷</p>
-          <p className="text-[11px] text-gray-400">最佳範圍</p>
+          <p className="text-xs text-gray-500 mt-2">7 天負荷</p>
+          <p className="text-[11px] text-gray-400">分鐘</p>
         </div>
       </div>
 
@@ -53,26 +52,28 @@ export function FitnessStatus({ activeTab, onTabChange, metrics }: FitnessStatus
         </div>
       </div>
 
-      <div className={`flex items-center gap-3 rounded-xl p-3.5 ${isRecovered ? 'bg-green-50' : 'bg-amber-50'}`}>
-        <i className={`ti ti-battery-4 text-2xl ${isRecovered ? 'text-green-700' : 'text-amber-700'}`} />
-        <div>
-          <p className={`text-sm ${isRecovered ? 'text-green-700' : 'text-amber-700'}`}>
-            {isRecovered ? '恢復狀態良好' : '仍在恢復中'}
-          </p>
-          <p className="text-xs text-gray-500 mt-0.5">
-            建議恢復時間已過 {metrics.recoveryHours} 小時，可正常訓練
-          </p>
+      {metrics.recoveryHours != null && (
+        <div className={`flex items-center gap-3 rounded-xl p-3.5 ${metrics.recoveryHours <= 24 ? 'bg-green-50' : 'bg-amber-50'}`}>
+          <i className={`ti ti-battery-4 text-2xl ${metrics.recoveryHours <= 24 ? 'text-green-700' : 'text-amber-700'}`} />
+          <div>
+            <p className={`text-sm ${metrics.recoveryHours <= 24 ? 'text-green-700' : 'text-amber-700'}`}>
+              {metrics.recoveryHours <= 24 ? '恢復狀態良好' : '仍在恢復中'}
+            </p>
+            <p className="text-xs text-gray-500 mt-0.5">
+              建議恢復時間 {metrics.recoveryHours} 小時
+            </p>
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="bg-gray-50 rounded-xl p-3.5">
         <div className="flex justify-between items-center mb-1.5">
           <p className="text-xs text-gray-500">安靜心率</p>
-          <p className="text-xs">{metrics.restingHeartRate} bpm</p>
+          <p className="text-xs">{metrics.restingHeartRate != null ? `${metrics.restingHeartRate} bpm` : '--'}</p>
         </div>
         <div className="flex justify-between items-center">
           <p className="text-xs text-gray-500">睡眠分數</p>
-          <p className="text-xs">{metrics.sleepScore}</p>
+          <p className="text-xs">{metrics.sleepScore ?? '--'}</p>
         </div>
       </div>
 
