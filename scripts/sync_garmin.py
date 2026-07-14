@@ -4,7 +4,9 @@ sync_garmin.py — 直接從 Garmin Connect 拉跑步活動寫入 Supabase activ
 由 GitHub Actions 排程執行（.github/workflows/garmin-sync.yml）。
 
 需要的環境變數：
-  GARMIN_EMAIL / GARMIN_PASSWORD  — Garmin Connect 帳密
+  GARMINTOKENS                    — Garmin token 字串（本機跑 scripts/garmin_login.py 產生）。
+                                    CI 一律走 token：帳密登入會被 Garmin 對雲端 IP 回 429。
+  GARMIN_EMAIL / GARMIN_PASSWORD  — 選填，沒有 token 時的本機備援登入
   SUPABASE_SERVICE_ROLE_KEY       — Supabase service role key（繞過 RLS 寫入）
   VELOSAYS_USER_ID                — 選填，預設 Sasha 的 user id
 """
@@ -33,19 +35,26 @@ HEADERS = {
 
 
 def garmin_login() -> Garmin:
-    """優先用快取 token（GitHub Actions 有 cache），失敗才用帳密登入。"""
-    try:
+    """優先用 GARMINTOKENS token 字串登入（CI 唯一可靠路徑），否則本機帳密備援。"""
+    tokens = os.environ.get("GARMINTOKENS")
+    if tokens:
         client = Garmin()
-        client.login(TOKEN_DIR)
-        print("使用快取 token 登入成功")
+        client.login(tokens)
+        print("使用 GARMINTOKENS 登入成功")
         return client
-    except Exception:
-        pass
 
-    client = Garmin(os.environ["GARMIN_EMAIL"], os.environ["GARMIN_PASSWORD"])
-    client.login()
-    client.garth.dump(TOKEN_DIR)
-    print("使用帳密登入成功，token 已快取")
+    email = os.environ.get("GARMIN_EMAIL")
+    password = os.environ.get("GARMIN_PASSWORD")
+    if not email or not password:
+        print(
+            "缺少 GARMINTOKENS（請先在本機執行 scripts/garmin_login.py 產生並設為 secret）",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    client = Garmin(email, password)
+    client.login(TOKEN_DIR)
+    print("使用帳密登入成功，token 已存到", TOKEN_DIR)
     return client
 
 
