@@ -24,18 +24,18 @@ export interface Split {
 }
 
 export interface RunDetail extends RunSummary {
-  city: string;
-  country: string;
-  temperatureC: number;
-  humidityPercent: number;
-  maxHeartRate: number;
-  cadence: number;
-  strideM: number;
-  aerobicPercent: number;
-  anaerobicPercent: number;
-  zones: HeartRateZone[];
-  splits: Split[];
-  coachFeedback: string;
+  city?: string;
+  country?: string;
+  temperatureC?: number;
+  humidityPercent?: number;
+  maxHeartRate?: number;
+  cadence?: number;
+  strideM?: number;
+  aerobicPercent?: number;
+  anaerobicPercent?: number;
+  zones?: HeartRateZone[];
+  splits?: Split[];
+  coachFeedback?: string;
 }
 
 export interface WeeklyProgress {
