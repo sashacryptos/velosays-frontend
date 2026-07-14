@@ -16,8 +16,9 @@ jobs:
         with:
           python-version: "3.12"
 
-      # 版本鎖定：garminconnect 改版時 API 會變（0.3 就改過），避免排程突然壞掉
-      - run: pip install "garminconnect==0.3.6" requests
+      # 版本鎖定 0.2.8：需與產生 GARMINTOKENS 的版本相容（0.3.x 改用不相容的
+      # di_token 格式）。若升級，token 需用新版重新產生。
+      - run: pip install "garminconnect==0.2.8" requests
 
       # CI 只用 GARMINTOKENS 登入：Garmin 對雲端 IP 的帳密登入一律回 429。
       # token 由本機執行 scripts/garmin_login.py 產生，效期約一年。
