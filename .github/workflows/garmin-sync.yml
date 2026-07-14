@@ -16,17 +16,12 @@ jobs:
         with:
           python-version: "3.12"
 
-      # 快取 Garmin 登入 token，避免每天重新帳密登入觸發風控
-      - uses: actions/cache@v4
-        with:
-          path: ~/.garminconnect
-          key: garmin-token-${{ github.run_id }}
-          restore-keys: garmin-token-
+      # 版本鎖定：garminconnect 改版時 API 會變（0.3 就改過），避免排程突然壞掉
+      - run: pip install "garminconnect==0.3.6" requests
 
-      - run: pip install garminconnect requests
-
+      # CI 只用 GARMINTOKENS 登入：Garmin 對雲端 IP 的帳密登入一律回 429。
+      # token 由本機執行 scripts/garmin_login.py 產生，效期約一年。
       - run: python scripts/sync_garmin.py
         env:
-          GARMIN_EMAIL: ${{ secrets.GARMIN_EMAIL }}
-          GARMIN_PASSWORD: ${{ secrets.GARMIN_PASSWORD }}
+          GARMINTOKENS: ${{ secrets.GARMINTOKENS }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
