@@ -82,12 +82,18 @@ def fetch_daily_metrics(client: Garmin) -> dict | None:
     metrics: dict = {"user_id": USER_ID, "date": today}
 
     try:
-        mm = client.get_max_metrics(today)
-        first = mm[0] if isinstance(mm, list) and mm else (mm or {})
-        generic = first.get("generic") or {}
-        vo2 = generic.get("vo2MaxPreciseValue") or generic.get("vo2MaxValue")
-        if vo2:
-            metrics["vo2max"] = float(vo2)
+        # VO2max 只在有跑步的日子有值，往回抓 30 天取最近一筆
+        start = (date.today() - timedelta(days=30)).isoformat()
+        garth_client = getattr(client, "garth", None) or client.client
+        mm = garth_client.connectapi(
+            f"/metrics-service/metrics/maxmet/daily/{start}/{today}"
+        )
+        for entry in reversed(mm or []):
+            generic = (entry or {}).get("generic") or {}
+            vo2 = generic.get("vo2MaxPreciseValue") or generic.get("vo2MaxValue")
+            if vo2:
+                metrics["vo2max"] = float(vo2)
+                break
     except Exception as e:
         print(f"VO2max 取得失敗: {e}")
 
