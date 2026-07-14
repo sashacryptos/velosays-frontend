@@ -1,0 +1,32 @@
+name: Garmin Sync
+
+on:
+  schedule:
+    # 每天 22:00 UTC = 台北 06:00
+    - cron: "0 22 * * *"
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # 快取 Garmin 登入 token，避免每天重新帳密登入觸發風控
+      - uses: actions/cache@v4
+        with:
+          path: ~/.garminconnect
+          key: garmin-token-${{ github.run_id }}
+          restore-keys: garmin-token-
+
+      - run: pip install garminconnect requests
+
+      - run: python scripts/sync_garmin.py
+        env:
+          GARMIN_EMAIL: ${{ secrets.GARMIN_EMAIL }}
+          GARMIN_PASSWORD: ${{ secrets.GARMIN_PASSWORD }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
