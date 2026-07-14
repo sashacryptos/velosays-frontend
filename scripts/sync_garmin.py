@@ -39,7 +39,13 @@ def garmin_login() -> Garmin:
     tokens = os.environ.get("GARMINTOKENS")
     if tokens:
         client = Garmin()
-        client.login(tokens)
+        garth_client = getattr(client, "garth", None)
+        if garth_client is not None:
+            # garminconnect 0.2.x：token 是 garth 的 base64 字串（scripts/garmin_login.py 產生）
+            garth_client.loads(tokens)
+        else:
+            # garminconnect 0.3.x：token 是 di_token JSON，格式與 0.2.x 不相容
+            client.login(tokens)
         print("使用 GARMINTOKENS 登入成功")
         return client
 
