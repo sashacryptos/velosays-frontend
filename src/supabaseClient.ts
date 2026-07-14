@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 
 const SUPABASE_URL = "https://uoufbcvvxvpetubvyeyw.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVvdWZiY3Z2eHZwZXR1YnZ5ZXl3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4Mzk0ODIsImV4cCI6MjA5NzQxNTQ4Mn0.q08w5HEpSiNrY5xSdAA-sWAH6mcwdUU6wlw0L0fO5_U";
+// publishable key（新版 API key 系統，設計為公開；舊 legacy anon key 已停用）
+const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_GF0TVSeWJwnSEFm8hI509A_bCAC1hae";
 
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+export const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
