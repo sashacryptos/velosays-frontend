@@ -1,4 +1,4 @@
-import type { WeeklyProgress } from '../types';
+import type { WeeklyProgress, RunSummary } from '../types';
 import { BottomNav } from './BottomNav';
 import type { NavTab } from '../types';
 
@@ -7,7 +7,10 @@ interface DashboardProps {
   onTabChange: (tab: NavTab) => void;
   weekly: WeeklyProgress[];
   weeklyGoalKm: number;
+  latestRun?: RunSummary;
   onViewPlan: () => void;
+  onSync: () => void;
+  syncing: boolean;
 }
 
 const StatCard = ({ label, value, unit }: { label: string; value: string; unit: string }) => (
@@ -19,28 +22,36 @@ const StatCard = ({ label, value, unit }: { label: string; value: string; unit: 
   </div>
 );
 
-export function Dashboard({ activeTab, onTabChange, weekly, weeklyGoalKm, onViewPlan }: DashboardProps) {
+const WEEKDAY_ZH = ['日', '一', '二', '三', '四', '五', '六'];
+
+export function Dashboard({ activeTab, onTabChange, weekly, weeklyGoalKm, latestRun, onViewPlan, onSync, syncing }: DashboardProps) {
   const completedKm = weekly.reduce((sum, d) => sum + d.distanceKm, 0);
   const maxKm = Math.max(...weekly.map((d) => d.distanceKm), 1);
+  const now = new Date();
+  const todayLabel = `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日 星期${WEEKDAY_ZH[now.getDay()]}`;
 
   return (
     <div className="max-w-sm mx-auto bg-white rounded-2xl p-3 flex flex-col gap-2.5">
       <div className="flex justify-between items-center px-1.5 pt-1 pb-0.5">
         <div>
-          <p className="text-xs text-gray-400">2026年7月13日 星期一</p>
-          <h2 className="text-lg font-medium mt-0.5">早安，今天輕鬆跑</h2>
+          <p className="text-xs text-gray-400">{todayLabel}</p>
+          <h2 className="text-lg font-medium mt-0.5">早安，Sasha</h2>
         </div>
-        <div className="flex items-center gap-1 bg-green-50 text-green-700 text-xs px-2 py-1 rounded-md">
-          <i className="ti ti-plug-connected text-xs" />
-          Garmin
-        </div>
+        <button
+          onClick={onSync}
+          disabled={syncing}
+          className="flex items-center gap-1 bg-green-50 text-green-700 text-xs px-2 py-1 rounded-md disabled:opacity-60"
+        >
+          <i className={`ti ${syncing ? 'ti-loader-2 animate-spin' : 'ti-refresh'} text-xs`} />
+          {syncing ? '同步中...' : '同步 Garmin'}
+        </button>
       </div>
 
       <div className="grid grid-cols-2 gap-2">
-        <StatCard label="昨日跑量" value="8.4" unit="km" />
-        <StatCard label="平均心率" value="148" unit="bpm" />
-        <StatCard label="配速" value="5'21" unit="/km" />
-        <StatCard label="恢復時間" value="18" unit="hr" />
+        <StatCard label="最近跑量" value={latestRun ? String(latestRun.distanceKm) : '--'} unit="km" />
+        <StatCard label="平均心率" value={latestRun?.avgHeartRate ? String(latestRun.avgHeartRate) : '--'} unit="bpm" />
+        <StatCard label="配速" value={latestRun?.paceMinPerKm ?? '--'} unit="/km" />
+        <StatCard label="時間" value={latestRun?.durationMin ? String(latestRun.durationMin) : '--'} unit="分" />
       </div>
 
       <div className="bg-gray-50 rounded-xl p-4 flex items-center gap-3">
