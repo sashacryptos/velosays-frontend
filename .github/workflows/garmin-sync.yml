@@ -5,6 +5,11 @@ on:
     # 每天 22:00 UTC = 台北 06:00
     - cron: "0 22 * * *"
   workflow_dispatch:
+    inputs:
+      force_monthly_goal:
+        description: "無視「月底」限制，強制生成當月的 AI 訓練目標（補跑/測試用）"
+        type: boolean
+        default: false
 
 jobs:
   sync:
@@ -26,3 +31,5 @@ jobs:
         env:
           GARMINTOKENS: ${{ secrets.GARMINTOKENS }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          FORCE_MONTHLY_GOAL: ${{ github.event.inputs.force_monthly_goal == 'true' && '1' || '' }}

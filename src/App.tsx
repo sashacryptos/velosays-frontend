@@ -8,20 +8,22 @@ import { BottomNav } from './components/BottomNav';
 import {
   fetchActivities,
   fetchLatestMetrics,
+  fetchMonthlyGoal,
   askCoach,
   toRunSummary,
   toRunDetail,
-  weeklyKmFromRows,
   monthlyKm,
   monthlyRunCount,
   weeklyLoadFromRows,
+  trainingLoadFromRows,
+  intensitySplitFromRows,
   type ActivityRow,
   type DailyMetricsRow,
+  type MonthlyGoalRow,
 } from './api/activities';
 import type { NavTab, FitnessMetrics } from './types';
 
 const USER_ID = 'c8f7c70c-7fbd-416d-8dbc-e817bf827e84';
-const WEEKLY_GOAL_KM = 40;
 
 interface ChatMessage {
   from: 'coach' | 'user';
@@ -32,6 +34,11 @@ const INITIAL_MESSAGES: ChatMessage[] = [
   { from: 'coach', text: '早安！我是你的 AI 跑步教練，已經讀取了你的 Garmin 訓練數據。今天想聊什麼？' },
 ];
 
+function currentYearMonth(): string {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+}
+
 function App() {
   const [activeTab, setActiveTab] = useState<NavTab>('dashboard');
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
@@ -39,16 +46,18 @@ function App() {
   const [asking, setAsking] = useState(false);
   const [rows, setRows] = useState<ActivityRow[]>([]);
   const [dailyMetrics, setDailyMetrics] = useState<DailyMetricsRow | null>(null);
+  const [monthlyGoal, setMonthlyGoal] = useState<MonthlyGoalRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    Promise.all([fetchActivities(USER_ID), fetchLatestMetrics(USER_ID)])
-      .then(([activityRows, metricsRow]) => {
+    Promise.all([fetchActivities(USER_ID), fetchLatestMetrics(USER_ID), fetchMonthlyGoal(USER_ID, currentYearMonth())])
+      .then(([activityRows, metricsRow, goalRow]) => {
         setRows(activityRows);
         setDailyMetrics(metricsRow);
+        setMonthlyGoal(goalRow);
       })
       .catch((error) => {
         console.error('撈取跑步紀錄失敗:', error);
@@ -69,9 +78,14 @@ function App() {
     setSyncing(true);
     setSyncMessage(null);
     try {
-      const [data, metricsRow] = await Promise.all([fetchActivities(USER_ID), fetchLatestMetrics(USER_ID)]);
+      const [data, metricsRow, goalRow] = await Promise.all([
+        fetchActivities(USER_ID),
+        fetchLatestMetrics(USER_ID),
+        fetchMonthlyGoal(USER_ID, currentYearMonth()),
+      ]);
       setRows(data);
       setDailyMetrics(metricsRow);
+      setMonthlyGoal(goalRow);
       setSyncMessage('已更新最新資料');
     } catch (error) {
       console.error('重新整理失敗:', error);
@@ -111,6 +125,8 @@ function App() {
 
   const runs = rows.map(toRunSummary);
   const weeklyLoad = weeklyLoadFromRows(rows);
+  const trainingLoad = trainingLoadFromRows(rows, dailyMetrics?.resting_hr ?? null);
+  const intensity = intensitySplitFromRows(rows, dailyMetrics?.resting_hr ?? null);
 
   const fitnessMetrics: FitnessMetrics = {
     vo2max: dailyMetrics?.vo2max ?? undefined,
@@ -136,10 +152,10 @@ function App() {
         screen = (
           <Dashboard
             runs={runs}
-            weeklyKm={weeklyKmFromRows(rows)}
-            weeklyGoalKm={WEEKLY_GOAL_KM}
+            monthlyKmValue={Math.round(monthlyKm(rows) * 10) / 10}
+            monthlyGoal={monthlyGoal}
             vo2max={dailyMetrics?.vo2max ?? undefined}
-            onTabChange={handleTabChange}
+            sleepScore={dailyMetrics?.sleep_score ?? undefined}
             onSelectRun={handleSelectRun}
             onSync={handleSync}
             syncing={syncing}
@@ -164,7 +180,7 @@ function App() {
         screen = <Coach messages={messages} onAsk={handleAsk} sending={asking} />;
         break;
       case 'fitness':
-        screen = <FitnessStatus metrics={fitnessMetrics} />;
+        screen = <FitnessStatus metrics={fitnessMetrics} trainingLoad={trainingLoad} intensity={intensity} />;
         break;
       case 'settings':
         screen = (

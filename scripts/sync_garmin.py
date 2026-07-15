@@ -9,8 +9,11 @@ sync_garmin.py — 直接從 Garmin Connect 拉跑步活動寫入 Supabase activ
   GARMIN_EMAIL / GARMIN_PASSWORD  — 選填，沒有 token 時的本機備援登入
   SUPABASE_SERVICE_ROLE_KEY       — Supabase service role key（繞過 RLS 寫入）
   VELOSAYS_USER_ID                — 選填，預設 Sasha 的 user id
+  GEMINI_API_KEY                  — 選填，月底自動生成下月訓練目標用（沒有就跳過這步）
+  FORCE_MONTHLY_GOAL              — 選填，設為 "1" 時無視「月底」限制強制生成當月目標（補跑用）
 """
 
+import json
 import os
 import sys
 import uuid
@@ -22,10 +25,18 @@ from garminconnect import Garmin
 SUPABASE_URL = "https://uoufbcvvxvpetubvyeyw.supabase.co"
 USER_ID = os.environ.get("VELOSAYS_USER_ID", "c8f7c70c-7fbd-416d-8dbc-e817bf827e84")
 SERVICE_KEY = os.environ["SUPABASE_SERVICE_ROLE_KEY"]
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 TOKEN_DIR = os.path.expanduser("~/.garminconnect")
 
 # 只回補這個天數內的活動；搭配去重，重跑不會產生重複資料
 LOOKBACK_DAYS = 60
+
+# 使用者提供的真實目標賽事資訊（非推算值）
+TARGET_RACE = {
+    "name": "金澤全程馬拉松",
+    "date": "2026-10-25",
+    "goal_label": "Sub 4:00",
+}
 
 HEADERS = {
     "apikey": SERVICE_KEY,
@@ -163,6 +174,32 @@ def is_duplicate(row: dict, existing: list[dict]) -> bool:
     return False
 
 
+def fetch_weather(client: Garmin, activity_id: str) -> dict:
+    """回傳 city/temperature_c/humidity_percent；抓不到就回空字典，不影響活動本身寫入。
+    Garmin 回傳欄位名稱是依社群已知的 activity weather 端點形狀推測，
+    第一次成功呼叫會印出完整原始回應，方便之後校正欄位對應。"""
+    try:
+        weather = client.get_activity_weather(activity_id)
+        if not weather:
+            return {}
+        print(f"  (原始天氣資料，供欄位校正參考): {json.dumps(weather, ensure_ascii=False)[:500]}")
+
+        result: dict = {}
+        temp = weather.get("temp")
+        if temp is not None:
+            result["temperature_c"] = round(float(temp), 1)
+        humidity = weather.get("relativeHumidity")
+        if humidity is not None:
+            result["humidity_percent"] = int(humidity)
+        station = (weather.get("weatherStationDTO") or {}).get("name")
+        if station:
+            result["city"] = station
+        return result
+    except Exception as e:
+        print(f"天氣資料取得失敗（activity {activity_id}）: {e}")
+        return {}
+
+
 def to_row(activity: dict) -> dict | None:
     type_key = (activity.get("activityType") or {}).get("typeKey", "")
     if "running" not in type_key:
@@ -197,6 +234,130 @@ def to_row(activity: dict) -> dict | None:
     }
 
 
+def is_last_day_of_month(d: date) -> bool:
+    return (d + timedelta(days=1)).day == 1
+
+
+def fetch_month_rows(year_month: str) -> list[dict]:
+    res = requests.get(
+        f"{SUPABASE_URL}/rest/v1/activities",
+        params={"user_id": f"eq.{USER_ID}", "date": f"gte.{year_month}-01", "select": "date,distance"},
+        headers=HEADERS,
+        timeout=30,
+    )
+    res.raise_for_status()
+    return [r for r in res.json() if r["date"].startswith(year_month)]
+
+
+def fetch_recent_daily_metrics(days: int = 35) -> list[dict]:
+    start = (date.today() - timedelta(days=days)).isoformat()
+    res = requests.get(
+        f"{SUPABASE_URL}/rest/v1/daily_metrics",
+        params={
+            "user_id": f"eq.{USER_ID}",
+            "date": f"gte.{start}",
+            "select": "date,vo2max,resting_hr,sleep_score",
+            "order": "date.asc",
+        },
+        headers=HEADERS,
+        timeout=30,
+    )
+    res.raise_for_status()
+    return res.json()
+
+
+def generate_month_goal(year_month: str, rows_this_month: list[dict], recent_metrics: list[dict], context_note: str) -> dict | None:
+    """呼叫 Gemini，依當月訓練數據 + 體能狀態 + 目標賽事，生成 year_month 的訓練目標。"""
+    if not GEMINI_API_KEY:
+        print("缺少 GEMINI_API_KEY，略過月目標生成")
+        return None
+
+    total_km = sum(float(r.get("distance") or 0) for r in rows_this_month)
+    run_count = len(rows_this_month)
+    latest_vo2 = next((m["vo2max"] for m in reversed(recent_metrics) if m.get("vo2max")), None)
+    latest_sleep = next((m["sleep_score"] for m in reversed(recent_metrics) if m.get("sleep_score")), None)
+    days_to_race = (date.fromisoformat(TARGET_RACE["date"]) - date.today()).days
+
+    prompt = (
+        f"你是 Sasha 的跑步教練，她正備戰 {TARGET_RACE['date']} 的{TARGET_RACE['name']}"
+        f"（目標 {TARGET_RACE['goal_label']}），距離比賽還有 {days_to_race} 天。{context_note}"
+        f"累積跑量 {total_km:.1f} km，共 {run_count} 次訓練。"
+        f"最近的 VO2max 約 {latest_vo2 or '未知'}，睡眠分數約 {latest_sleep or '未知'}。"
+        f"請根據這些數據與備賽時程，給她 {year_month} 的訓練目標，"
+        '請只回傳 JSON（不要加 markdown code fence），格式：'
+        '{"goal_km": 數字, "summary": "一句話說明這個月訓練重點", "focus": "本月重點關鍵字，例如：有氧基礎"}'
+    )
+
+    res = requests.post(
+        f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={GEMINI_API_KEY}",
+        headers={"Content-Type": "application/json"},
+        json={
+            "contents": [{"parts": [{"text": prompt}]}],
+            "generationConfig": {"temperature": 0.6, "maxOutputTokens": 300, "thinkingConfig": {"thinkingBudget": 0}},
+        },
+        timeout=30,
+    )
+    if not res.ok:
+        print(f"Gemini 月目標生成失敗 {res.status_code}: {res.text}", file=sys.stderr)
+        return None
+
+    try:
+        text = res.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
+        if text.startswith("```"):
+            text = text.strip("`")
+            if text.startswith("json"):
+                text = text[4:]
+        parsed = json.loads(text.strip())
+        return {
+            "user_id": USER_ID,
+            "year_month": year_month,
+            "goal_km": float(parsed["goal_km"]),
+            "summary": parsed.get("summary"),
+            "focus": parsed.get("focus"),
+        }
+    except Exception as e:
+        print(f"解析 Gemini 月目標回覆失敗: {e}")
+        return None
+
+
+def upsert_monthly_goal(goal: dict) -> None:
+    res = requests.post(
+        f"{SUPABASE_URL}/rest/v1/monthly_goals",
+        params={"on_conflict": "user_id,year_month"},
+        headers={**HEADERS, "Prefer": "resolution=merge-duplicates"},
+        json=[goal],
+        timeout=30,
+    )
+    if res.ok:
+        print(f"月目標已生成：{goal['year_month']} → {goal['goal_km']} km（{goal.get('summary')}）")
+    elif res.status_code == 404:
+        print("monthly_goals 表不存在，略過月目標（請在 Supabase SQL editor 建表）")
+    else:
+        print(f"月目標寫入失敗 {res.status_code}: {res.text}", file=sys.stderr)
+
+
+def maybe_generate_monthly_goal() -> None:
+    today = date.today()
+    force = os.environ.get("FORCE_MONTHLY_GOAL") == "1"
+    is_month_end = is_last_day_of_month(today)
+    if not is_month_end and not force:
+        return
+
+    if is_month_end:
+        target_month = (today + timedelta(days=1)).strftime("%Y-%m")
+        note = f"這是她 {today.strftime('%Y-%m')} 完整一個月的訓練回顧，請生成下個月的目標。"
+    else:
+        # 月中手動補跑（例如剛上線這個功能時，幫當月補一個目標）
+        target_month = today.strftime("%Y-%m")
+        note = f"現在是 {today.isoformat()}，月中補生成本月目標，請根據近期訓練狀況估算合理目標。"
+
+    rows_this_month = fetch_month_rows(today.strftime("%Y-%m"))
+    recent_metrics = fetch_recent_daily_metrics()
+    goal = generate_month_goal(target_month, rows_this_month, recent_metrics, note)
+    if goal:
+        upsert_monthly_goal(goal)
+
+
 def main() -> None:
     client = garmin_login()
 
@@ -214,26 +375,29 @@ def main() -> None:
     for activity in activities:
         row = to_row(activity)
         if row and not is_duplicate(row, existing):
+            row.update(fetch_weather(client, activity["activityId"]))
             rows.append(row)
 
     if not rows:
         print("沒有需要新增的跑步活動")
-        return
+    else:
+        res = requests.post(
+            f"{SUPABASE_URL}/rest/v1/activities",
+            params={"on_conflict": "id"},
+            headers={**HEADERS, "Prefer": "resolution=merge-duplicates"},
+            json=rows,
+            timeout=30,
+        )
+        if not res.ok:
+            print(f"Supabase 寫入失敗 {res.status_code}: {res.text}", file=sys.stderr)
+            sys.exit(1)
 
-    res = requests.post(
-        f"{SUPABASE_URL}/rest/v1/activities",
-        params={"on_conflict": "id"},
-        headers={**HEADERS, "Prefer": "resolution=merge-duplicates"},
-        json=rows,
-        timeout=30,
-    )
-    if not res.ok:
-        print(f"Supabase 寫入失敗 {res.status_code}: {res.text}", file=sys.stderr)
-        sys.exit(1)
+        for row in rows:
+            print(f"  + {row['date']} {row['title']} {row['distance']} km")
+        print(f"已寫入 {len(rows)} 筆新活動")
 
-    for row in rows:
-        print(f"  + {row['date']} {row['title']} {row['distance']} km")
-    print(f"已寫入 {len(rows)} 筆新活動")
+    # 即使今天沒有新活動（例如休息日），月底/強制補跑仍要照常生成月目標
+    maybe_generate_monthly_goal()
 
 
 if __name__ == "__main__":

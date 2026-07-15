@@ -1,13 +1,15 @@
-import type { RunSummary, NavTab } from '../types';
-import { RUN_TYPE_ICON, RUN_TYPE_COLOR } from '../runTypeStyle';
-import { weekStripFromRuns } from '../api/activities';
+import { useEffect, useRef } from 'react';
+import type { RunSummary } from '../types';
+import type { MonthlyGoalRow } from '../api/activities';
+import { dateStripFromRuns } from '../api/activities';
+import { TARGET_RACE, daysUntilRace } from '../raceConfig';
 
 interface DashboardProps {
   runs: RunSummary[];
-  weeklyKm: number;
-  weeklyGoalKm: number;
+  monthlyKmValue: number;
+  monthlyGoal: MonthlyGoalRow | null;
   vo2max?: number;
-  onTabChange: (tab: NavTab) => void;
+  sleepScore?: number;
   onSelectRun: (id: string) => void;
   onSync: () => void;
   syncing: boolean;
@@ -28,10 +30,10 @@ const WEEKDAY_ZH = ['日', '一', '二', '三', '四', '五', '六'];
 
 export function Dashboard({
   runs,
-  weeklyKm,
-  weeklyGoalKm,
+  monthlyKmValue,
+  monthlyGoal,
   vo2max,
-  onTabChange,
+  sleepScore,
   onSelectRun,
   onSync,
   syncing,
@@ -40,12 +42,17 @@ export function Dashboard({
 }: DashboardProps) {
   const now = new Date();
   const todayLabel = `${now.getMonth() + 1}月${now.getDate()}日 星期${WEEKDAY_ZH[now.getDay()]}`;
-  const weekStrip = weekStripFromRuns(runs);
+  const dateStrip = dateStripFromRuns(runs);
   const latestRun = runs[0];
-  const recentRuns = runs.slice(0, 3);
+  const todayRef = useRef<HTMLButtonElement>(null);
 
-  const weekPct = Math.min(100, Math.round((weeklyKm / weeklyGoalKm) * 100));
-  const remainKm = Math.max(0, Math.round((weeklyGoalKm - weeklyKm) * 10) / 10);
+  useEffect(() => {
+    todayRef.current?.scrollIntoView({ behavior: 'auto', inline: 'center', block: 'nearest' });
+  }, []);
+
+  const remainKm = monthlyGoal ? Math.max(0, Math.round((monthlyGoal.goal_km - monthlyKmValue) * 10) / 10) : null;
+  const goalPct = monthlyGoal ? Math.min(100, Math.round((monthlyKmValue / monthlyGoal.goal_km) * 100)) : null;
+  const daysLeft = daysUntilRace();
 
   return (
     <div className="flex-1 overflow-y-auto px-5 pt-14 pb-[108px] flex flex-col gap-5">
@@ -79,16 +86,21 @@ export function Dashboard({
         </button>
       </div>
 
-      <div className="flex gap-1.5">
-        {weekStrip.map((d) => (
+      <div
+        className="flex gap-1.5 overflow-x-auto pb-1 -mx-5 px-5"
+        style={{ scrollbarWidth: 'none', scrollSnapType: 'x mandatory' }}
+      >
+        {dateStrip.map((d) => (
           <button
-            key={d.dayLabel + d.dateNum}
+            key={d.iso}
+            ref={d.isToday ? todayRef : undefined}
             onClick={() => d.runId && onSelectRun(d.runId)}
-            className="flex-1 flex flex-col items-center gap-1 pt-2.5 pb-2 rounded-2xl border-none"
+            className="flex-shrink-0 w-[52px] flex flex-col items-center gap-1 pt-2.5 pb-2 rounded-2xl border-none"
             style={{
               background: d.isToday ? 'linear-gradient(160deg,#60A5FA,#2563EB)' : '#ffffff',
               boxShadow: d.isToday ? '0 8px 18px rgba(37,99,235,0.35)' : 'none',
               cursor: d.runId ? 'pointer' : 'default',
+              scrollSnapAlign: 'start',
             }}
           >
             <span
@@ -109,110 +121,39 @@ export function Dashboard({
       </div>
 
       <div
-        className="relative rounded-[28px] p-6 text-white overflow-hidden"
+        className="rounded-2xl p-4 text-white"
         style={{
-          background:
-            'radial-gradient(120% 140% at 8% 0%, #93B8F8 0%, #4C82F0 34%, #2563EB 62%, #F97316 130%)',
-          boxShadow: '0 16px 36px rgba(37,99,235,0.32)',
+          background: 'linear-gradient(120deg, #4C82F0 0%, #2563EB 55%, #C2570F 130%)',
+          boxShadow: '0 10px 24px rgba(37,99,235,0.28)',
         }}
       >
-        <div
-          className="absolute -right-10 -bottom-16 w-[200px] h-[200px] rounded-full pointer-events-none"
-          style={{ background: 'radial-gradient(circle, rgba(253,186,116,0.55) 0%, rgba(253,186,116,0) 70%)' }}
-        />
-        <div className="relative flex justify-between items-start">
-          <div>
-            <p className="m-0 text-[13px] opacity-85">本週跑量</p>
-            <p className="mt-1.5 mb-0 text-[44px] font-medium font-[Outfit] leading-none">
-              {weeklyKm.toFixed(1)}
-              <span className="text-[17px] font-normal opacity-85"> / {weeklyGoalKm} km</span>
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => onTabChange('fitness')}
-              aria-label="體能"
-              className="w-10 h-10 rounded-full border-none cursor-pointer flex items-center justify-center text-white"
-              style={{ background: 'rgba(255,255,255,0.22)' }}
-            >
-              <i className="ti ti-heartbeat text-lg" />
-            </button>
-            <button
-              onClick={() => onTabChange('coach')}
-              aria-label="教練"
-              className="w-10 h-10 rounded-full border-none cursor-pointer flex items-center justify-center text-white"
-              style={{ background: 'rgba(255,255,255,0.22)' }}
-            >
-              <i className="ti ti-message-circle text-lg" />
-            </button>
-          </div>
-        </div>
-        <div className="relative mt-[18px] h-2 rounded-full" style={{ background: 'rgba(255,255,255,0.28)' }}>
-          <div className="absolute inset-y-0 left-0 rounded-full bg-white" style={{ width: `${weekPct}%` }} />
-        </div>
-        <p className="relative mt-3 mb-0 text-[13px] opacity-90">
-          {remainKm > 0 ? `還差 ${remainKm} km` : '已達成本週目標！'}
+        <p className="m-0 text-[11px] opacity-85">
+          🎯 {TARGET_RACE.name}・{TARGET_RACE.goalLabel}・倒數 {daysLeft} 天
         </p>
+        <p className="mt-2 mb-0 text-xs opacity-85">本月跑量</p>
+        <p className="mt-1 mb-0 text-[28px] font-medium font-[Outfit] leading-none">
+          {monthlyKmValue.toFixed(1)}
+          <span className="text-sm font-normal opacity-85"> {monthlyGoal ? `/ ${monthlyGoal.goal_km} km` : 'km'}</span>
+        </p>
+        {monthlyGoal && (
+          <>
+            <div className="mt-2.5 h-1.5 rounded-full" style={{ background: 'rgba(255,255,255,0.28)' }}>
+              <div className="h-full rounded-full bg-white" style={{ width: `${goalPct}%` }} />
+            </div>
+            <p className="mt-1.5 mb-0 text-[11px] opacity-90">
+              {remainKm && remainKm > 0 ? `還差 ${remainKm} km` : '已達成本月目標！'}
+              {monthlyGoal.focus ? `・${monthlyGoal.focus}` : ''}
+            </p>
+          </>
+        )}
       </div>
 
-      <div className="grid grid-cols-3 gap-2.5">
+      <div className="grid grid-cols-4 gap-2">
         <StatCard label="最近配速" value={latestRun?.paceMinPerKm ?? '--'} />
         <StatCard label="平均心率" value={latestRun?.avgHeartRate ? String(latestRun.avgHeartRate) : '--'} />
         <StatCard label="VO2max" value={vo2max != null ? String(vo2max) : '--'} accent />
+        <StatCard label="睡眠分數" value={sleepScore != null ? String(sleepScore) : '--'} />
       </div>
-
-      {recentRuns.length > 0 && (
-        <div>
-          <div className="flex justify-between items-baseline mb-3">
-            <p className="m-0 text-base font-bold text-[#1C2430]">最近訓練紀錄</p>
-            <button
-              onClick={() => onTabChange('history')}
-              className="bg-transparent border-none cursor-pointer p-0 text-[13px] text-[#2563EB]"
-            >
-              歷史數據 →
-            </button>
-          </div>
-          <div className="flex flex-col">
-            {recentRuns.map((r, i) => {
-              const style = RUN_TYPE_COLOR[r.type];
-              const shortDate = r.isoDate.slice(5).replace('-', '/');
-              return (
-                <div key={r.id} className="flex gap-3.5">
-                  <div className="flex flex-col items-center w-11 shrink-0">
-                    <span className="text-xs font-semibold font-[Outfit]" style={{ color: style.color }}>
-                      {shortDate}
-                    </span>
-                    <span
-                      className="w-2 h-2 rounded-full mt-1.5"
-                      style={{ background: style.dot, boxShadow: `0 0 0 3px ${style.ring}` }}
-                    />
-                    {i < recentRuns.length - 1 && <span className="w-0.5 flex-1 bg-[#E4DFD7] mt-1" />}
-                  </div>
-                  <button
-                    onClick={() => onSelectRun(r.id)}
-                    className="flex-1 bg-white rounded-2xl px-4 py-3.5 mb-3 flex items-center gap-3 text-left border-none cursor-pointer"
-                  >
-                    <span
-                      className="w-[38px] h-[38px] rounded-full flex items-center justify-center shrink-0"
-                      style={{ background: style.bg, color: style.color }}
-                    >
-                      <i className={`ti ${RUN_TYPE_ICON[r.type]} text-[17px]`} />
-                    </span>
-                    <div>
-                      <p className="m-0 text-sm font-medium text-[#1C2430]">
-                        {r.type}・{r.distanceKm} km
-                      </p>
-                      <p className="mt-0.5 mb-0 text-xs text-[#9AA3B0]">
-                        {r.paceMinPerKm}/km・{r.avgHeartRate} bpm
-                      </p>
-                    </div>
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
