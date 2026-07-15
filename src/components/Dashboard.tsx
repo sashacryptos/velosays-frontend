@@ -46,7 +46,7 @@ export function Dashboard({ activeTab, onTabChange, weekly, weeklyGoalKm, latest
           className="flex items-center gap-1 bg-green-50 text-green-700 text-xs px-2 py-1 rounded-md disabled:opacity-60"
         >
           <i className={`ti ${syncing ? 'ti-loader-2 animate-spin' : 'ti-refresh'} text-xs`} />
-          {syncing ? '同步中...' : '同步 Garmin'}
+          {syncing ? '更新中...' : '重新整理'}
         </button>
       </div>
 

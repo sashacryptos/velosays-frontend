@@ -1,25 +1,11 @@
 import { supabase } from '../supabaseClient';
 import type { RunSummary, RunDetail, WeeklyProgress } from '../types';
 
-// GAS 後端：sync_activities 同步 + strava_chat AI 教練（2026-07-15 的新部署）
+// GAS 後端：strava_chat AI 教練（2026-07-15 的新部署）。
+// 活動資料改由 GitHub Actions 每日直連 Garmin 同步（見 scripts/sync_garmin.py），
+// 這個 GAS 部署的 sync_activities 分支仍依賴已停用的 Strava app，前端不再呼叫它。
 const SYNC_ENDPOINT =
   'https://script.google.com/macros/s/AKfycbzz86Yy5aHgfROz5zdi7G0O_x8L3uxcl0pZBTjKU_Ud9nRf1AzPMNJaKBMbsDGSyQrR/exec';
-
-interface SyncResult {
-  status: string;
-  message?: string;
-  error?: string;
-}
-
-export async function syncActivities(userId: string): Promise<SyncResult> {
-  // GAS 不支援 CORS preflight，必須用 text/plain 讓瀏覽器視為 simple request
-  const response = await fetch(SYNC_ENDPOINT, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify({ action: 'sync_activities', user_id: userId }),
-  });
-  return (await response.json()) as SyncResult;
-}
 
 export interface DailyMetricsRow {
   date: string;

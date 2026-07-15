@@ -8,7 +8,6 @@ import { BottomNav } from './components/BottomNav';
 import {
   fetchActivities,
   fetchLatestMetrics,
-  syncActivities,
   askCoach,
   toRunSummary,
   toRunDetail,
@@ -62,22 +61,24 @@ function App() {
       .finally(() => setLoading(false));
   }, []);
 
+  // Garmin 資料由 GitHub Actions 排程每日自動同步（見 scripts/sync_garmin.py），
+  // 這裡不再觸發舊的 GAS/Strava 同步路徑（Strava app 已停用，會回 403）。
+  // 這個按鈕改為單純重新從 Supabase 抓最新資料。
   const handleSync = async () => {
     if (syncing) return;
     setSyncing(true);
     setSyncMessage(null);
     try {
-      const result = await syncActivities(USER_ID);
-      if (result.status === 'error') {
-        setSyncMessage(`同步失敗：${result.error ?? '未知錯誤'}`);
-      } else {
-        const data = await fetchActivities(USER_ID);
-        setRows(data);
-        setSyncMessage(result.message ?? '同步完成');
-      }
+      const [data, metricsRow] = await Promise.all([
+        fetchActivities(USER_ID),
+        fetchLatestMetrics(USER_ID),
+      ]);
+      setRows(data);
+      setDailyMetrics(metricsRow);
+      setSyncMessage('已更新最新資料');
     } catch (error) {
-      console.error('同步失敗:', error);
-      setSyncMessage(`同步失敗：${error instanceof Error ? error.message : String(error)}`);
+      console.error('重新整理失敗:', error);
+      setSyncMessage(`重新整理失敗：${error instanceof Error ? error.message : String(error)}`);
     } finally {
       setSyncing(false);
     }
@@ -122,7 +123,7 @@ function App() {
       {syncMessage && (
         <div
           className={`w-full max-w-md md:max-w-lg mx-auto mb-2 text-xs rounded-lg px-3 py-2 ${
-            syncMessage.startsWith('同步失敗') ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'
+            syncMessage.includes('失敗') ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'
           }`}
         >
           {syncMessage}
