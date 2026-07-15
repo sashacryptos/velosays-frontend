@@ -164,6 +164,8 @@ function App() {
               weeklyGoalKm={WEEKLY_GOAL_KM}
               latestRun={runs[0]}
               vo2max={dailyMetrics?.vo2max ?? undefined}
+              restingHeartRate={dailyMetrics?.resting_hr ?? undefined}
+              sleepScore={dailyMetrics?.sleep_score ?? undefined}
               onViewPlan={() => setActiveTab('coach')}
               onSync={handleSync}
               syncing={syncing}

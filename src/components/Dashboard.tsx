@@ -9,6 +9,8 @@ interface DashboardProps {
   weeklyGoalKm: number;
   latestRun?: RunSummary;
   vo2max?: number;
+  restingHeartRate?: number;
+  sleepScore?: number;
   onViewPlan: () => void;
   onSync: () => void;
   syncing: boolean;
@@ -25,7 +27,7 @@ const StatCard = ({ label, value, unit }: { label: string; value: string; unit: 
 
 const WEEKDAY_ZH = ['日', '一', '二', '三', '四', '五', '六'];
 
-export function Dashboard({ activeTab, onTabChange, weekly, weeklyGoalKm, latestRun, vo2max, onViewPlan, onSync, syncing }: DashboardProps) {
+export function Dashboard({ activeTab, onTabChange, weekly, weeklyGoalKm, latestRun, vo2max, restingHeartRate, sleepScore, onViewPlan, onSync, syncing }: DashboardProps) {
   const completedKm = weekly.reduce((sum, d) => sum + d.distanceKm, 0);
   const maxKm = Math.max(...weekly.map((d) => d.distanceKm), 1);
   const now = new Date();
@@ -55,14 +57,28 @@ export function Dashboard({ activeTab, onTabChange, weekly, weeklyGoalKm, latest
         <StatCard label="時間" value={latestRun?.durationMin ? String(latestRun.durationMin) : '--'} unit="分" />
       </div>
 
-      {vo2max != null && (
-        <div className="bg-gray-50 rounded-xl p-4 flex items-center gap-3">
-          <div className="w-14 h-14 rounded-full border-[3px] border-purple-400 flex items-center justify-center flex-shrink-0">
-            <span className="text-base font-medium">{vo2max}</span>
-          </div>
-          <div>
-            <p className="text-sm">VO2max</p>
-            <p className="text-xs text-gray-500 mt-0.5">來自 Garmin 每日同步</p>
+      {(vo2max != null || restingHeartRate != null || sleepScore != null) && (
+        <div className="bg-gray-50 rounded-xl p-4">
+          <p className="text-sm text-gray-500 mb-3">每日體能 <span className="text-[11px] text-gray-400">・Garmin 同步</span></p>
+          <div className="grid grid-cols-3 gap-2">
+            <div className="flex flex-col items-center">
+              <div className="w-14 h-14 rounded-full border-[3px] border-purple-400 flex items-center justify-center">
+                <span className="text-base font-medium">{vo2max ?? '--'}</span>
+              </div>
+              <p className="text-xs text-gray-500 mt-1.5">VO2max</p>
+            </div>
+            <div className="flex flex-col items-center">
+              <div className="w-14 h-14 rounded-full border-[3px] border-rose-300 flex items-center justify-center">
+                <span className="text-base font-medium">{restingHeartRate ?? '--'}</span>
+              </div>
+              <p className="text-xs text-gray-500 mt-1.5">安靜心率</p>
+            </div>
+            <div className="flex flex-col items-center">
+              <div className="w-14 h-14 rounded-full border-[3px] border-sky-300 flex items-center justify-center">
+                <span className="text-base font-medium">{sleepScore ?? '--'}</span>
+              </div>
+              <p className="text-xs text-gray-500 mt-1.5">睡眠分數</p>
+            </div>
           </div>
         </div>
       )}
