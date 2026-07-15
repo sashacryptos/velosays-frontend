@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { RunSummary } from '../types';
 import { RUN_TYPE_ICON, RUN_TYPE_COLOR } from '../runTypeStyle';
+import { formatDurationHms } from '../api/activities';
 
 interface HistoryListProps {
   runs: RunSummary[];
@@ -77,7 +78,7 @@ export function HistoryList({ runs, monthlyKm, monthlyCount, totalCount, onSelec
                   {run.date}・{run.type}
                 </p>
                 <p className="mt-0.5 mb-0 text-xs text-[#9AA3B0]">
-                  {run.paceMinPerKm}/km・{run.avgHeartRate} bpm・{run.durationMin ?? '--'} 分
+                  {run.paceMinPerKm}/km・{run.avgHeartRate} bpm・{formatDurationHms(run.durationSec)}
                 </p>
               </div>
               <i className="ti ti-chevron-right text-[#C4CAD3]" />

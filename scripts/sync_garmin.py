@@ -17,7 +17,7 @@ import json
 import os
 import sys
 import uuid
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 import requests
 from garminconnect import Garmin
@@ -27,6 +27,15 @@ USER_ID = os.environ.get("VELOSAYS_USER_ID", "c8f7c70c-7fbd-416d-8dbc-e817bf827e
 SERVICE_KEY = os.environ["SUPABASE_SERVICE_ROLE_KEY"]
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 TOKEN_DIR = os.path.expanduser("~/.garminconnect")
+
+TAIPEI_TZ = timezone(timedelta(hours=8))
+
+
+def today_taipei() -> date:
+    """GitHub Actions runner 是 UTC；cron 特意排在 22:00 UTC(=台北 06:00) 觸發，
+    若直接用 date.today() 會拿到 UTC 日期，比台北的「今天」晚一天算出來的所有
+    日期（daily_metrics 的 date、Garmin 查詢的 today、月底判斷）都會整套錯一天。"""
+    return datetime.now(TAIPEI_TZ).date()
 
 # 只回補這個天數內的活動；搭配去重，重跑不會產生重複資料
 LOOKBACK_DAYS = 60
@@ -89,12 +98,12 @@ def ensure_profile(client: Garmin) -> None:
 
 def fetch_daily_metrics(client: Garmin) -> dict | None:
     """拉當日體能指標；個別失敗不影響其他項目。"""
-    today = date.today().isoformat()
+    today = today_taipei().isoformat()
     metrics: dict = {"user_id": USER_ID, "date": today}
 
     try:
         # VO2max 只在有跑步的日子有值，往回抓 30 天取最近一筆
-        start = (date.today() - timedelta(days=30)).isoformat()
+        start = (today_taipei() - timedelta(days=30)).isoformat()
         garth_client = getattr(client, "garth", None) or client.client
         mm = garth_client.connectapi(
             f"/metrics-service/metrics/maxmet/daily/{start}/{today}"
@@ -250,7 +259,7 @@ def fetch_month_rows(year_month: str) -> list[dict]:
 
 
 def fetch_recent_daily_metrics(days: int = 35) -> list[dict]:
-    start = (date.today() - timedelta(days=days)).isoformat()
+    start = (today_taipei() - timedelta(days=days)).isoformat()
     res = requests.get(
         f"{SUPABASE_URL}/rest/v1/daily_metrics",
         params={
@@ -276,7 +285,7 @@ def generate_month_goal(year_month: str, rows_this_month: list[dict], recent_met
     run_count = len(rows_this_month)
     latest_vo2 = next((m["vo2max"] for m in reversed(recent_metrics) if m.get("vo2max")), None)
     latest_sleep = next((m["sleep_score"] for m in reversed(recent_metrics) if m.get("sleep_score")), None)
-    days_to_race = (date.fromisoformat(TARGET_RACE["date"]) - date.today()).days
+    days_to_race = (date.fromisoformat(TARGET_RACE["date"]) - today_taipei()).days
 
     prompt = (
         f"你是 Sasha 的跑步教練，她正備戰 {TARGET_RACE['date']} 的{TARGET_RACE['name']}"
@@ -337,7 +346,7 @@ def upsert_monthly_goal(goal: dict) -> None:
 
 
 def maybe_generate_monthly_goal() -> None:
-    today = date.today()
+    today = today_taipei()
     force = os.environ.get("FORCE_MONTHLY_GOAL") == "1"
     is_month_end = is_last_day_of_month(today)
     if not is_month_end and not force:
@@ -365,8 +374,8 @@ def main() -> None:
     if metrics:
         upsert_daily_metrics(metrics)
 
-    start = (date.today() - timedelta(days=LOOKBACK_DAYS)).isoformat()
-    end = date.today().isoformat()
+    start = (today_taipei() - timedelta(days=LOOKBACK_DAYS)).isoformat()
+    end = today_taipei().isoformat()
     activities = client.get_activities_by_date(start, end)
     print(f"Garmin 回傳 {len(activities)} 筆活動（{start} ~ {end}）")
 

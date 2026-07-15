@@ -156,6 +156,7 @@ function App() {
             monthlyGoal={monthlyGoal}
             vo2max={dailyMetrics?.vo2max ?? undefined}
             sleepScore={dailyMetrics?.sleep_score ?? undefined}
+            metricsDate={dailyMetrics?.date ?? undefined}
             onSelectRun={handleSelectRun}
             onSync={handleSync}
             syncing={syncing}

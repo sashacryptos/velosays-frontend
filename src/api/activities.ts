@@ -154,8 +154,17 @@ export function toRunSummary(row: ActivityRow): RunSummary {
     distanceKm: Number(row.distance) || 0,
     paceMinPerKm: row.pace || paceFromDuration(row.duration, row.distance),
     avgHeartRate: row.avg_hr ?? 0,
-    durationMin: row.duration ? Math.round(row.duration / 60) : undefined,
+    durationSec: row.duration || undefined,
   };
+}
+
+// hh:mm:ss（時:分:秒，恆定三段，方便跟碼錶顯示一致）
+export function formatDurationHms(totalSec?: number): string {
+  if (totalSec == null || totalSec <= 0) return '--:--:--';
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = Math.floor(totalSec % 60);
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 
 // 心率區間、分段配速資料庫尚未提供，維持 undefined 讓畫面自行省略；
@@ -190,6 +199,18 @@ export function weeklyKmFromRows(rows: ActivityRow[]): number {
     const dayIndex = Math.floor((d.getTime() - monday.getTime()) / 86400000);
     return dayIndex >= 0 && dayIndex < 7 ? sum + (Number(row.distance) || 0) : sum;
   }, 0);
+}
+
+// 本週（週一起算）每日跑量，用於看板迷你長條圖
+export function weeklyKmByDay(runs: RunSummary[]): number[] {
+  const monday = mondayOfCurrentWeek();
+  const km = Array(7).fill(0) as number[];
+  for (const r of runs) {
+    const d = new Date(r.isoDate);
+    const dayIndex = Math.floor((d.getTime() - monday.getTime()) / 86400000);
+    if (dayIndex >= 0 && dayIndex < 7) km[dayIndex] += r.distanceKm;
+  }
+  return km;
 }
 
 export interface DateStripDay {

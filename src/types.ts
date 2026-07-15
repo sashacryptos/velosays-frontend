@@ -8,7 +8,7 @@ export interface RunSummary {
   distanceKm: number;
   paceMinPerKm: string;
   avgHeartRate: number;
-  durationMin?: number;
+  durationSec?: number;
 }
 
 export interface HeartRateZone {

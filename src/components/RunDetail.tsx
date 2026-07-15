@@ -1,4 +1,5 @@
 import type { RunDetail as RunDetailType } from '../types';
+import { formatDurationHms } from '../api/activities';
 
 interface RunDetailProps {
   run: RunDetailType;
@@ -72,10 +73,7 @@ export function RunDetail({ run, onBack }: RunDetailProps) {
           </div>
           <div>
             <p className="m-0 text-xs opacity-85">時間</p>
-            <p className="mt-1 mb-0 text-[26px] font-medium font-[Outfit]">
-              {run.durationMin ?? '--'}
-              <span className="text-[13px] opacity-85"> 分</span>
-            </p>
+            <p className="mt-1.5 mb-0 text-lg font-medium font-[Outfit]">{formatDurationHms(run.durationSec)}</p>
           </div>
         </div>
       </div>
