@@ -1,158 +1,149 @@
-import type { RunDetail as RunDetailType, NavTab } from '../types';
-import { BottomNav } from './BottomNav';
+import type { RunDetail as RunDetailType } from '../types';
 
 interface RunDetailProps {
-  activeTab: NavTab;
-  onTabChange: (tab: NavTab) => void;
   run: RunDetailType;
   onBack: () => void;
 }
 
-export function RunDetail({ activeTab, onTabChange, run, onBack }: RunDetailProps) {
-  const hasLocation = run.city != null;
-  const hasWeather = run.temperatureC != null || run.humidityPercent != null;
+const ZONE_COLOR: Record<string, string> = {
+  Z1: '#BFD7FB',
+  Z2: '#60A5FA',
+  Z3: '#2563EB',
+  Z4: '#F97316',
+  Z5: '#C2570F',
+};
+
+function paceSeconds(pace: string): number {
+  const m = pace.match(/(\d+)['’:](\d+)/);
+  return m ? Number(m[1]) * 60 + Number(m[2]) : 0;
+}
+
+const MetricCard = ({ label, value, unit }: { label: string; value: string | number; unit: string }) => (
+  <div className="bg-white rounded-[20px] px-4 py-3.5">
+    <p className="m-0 text-[11px] text-[#9AA3B0]">{label}</p>
+    <p className="mt-1 mb-0 text-lg font-medium font-[Outfit] text-[#1C2430]">
+      {value} <span className="text-[11px] text-[#9AA3B0]">{unit}</span>
+    </p>
+  </div>
+);
+
+export function RunDetail({ run, onBack }: RunDetailProps) {
   const zones = run.zones ?? [];
   const splits = run.splits ?? [];
 
+  const subtitleParts = [run.date];
+  if (run.city) subtitleParts.push(run.country ? `${run.city}, ${run.country}` : run.city);
+  if (run.temperatureC != null) subtitleParts.push(`${run.temperatureC}°C`);
+  if (run.humidityPercent != null) subtitleParts.push(`${run.humidityPercent}%`);
+
+  const fastestSec = splits.length ? Math.min(...splits.map((s) => paceSeconds(s.pace))) : 0;
+
   return (
-    <div className="w-full max-w-md md:max-w-lg mx-auto bg-white rounded-2xl shadow-sm p-3 sm:p-4 flex flex-col gap-2.5">
-      <div className="flex items-center gap-2.5 px-1.5 pt-1 pb-0.5">
-        <button onClick={onBack} aria-label="返回">
-          <i className="ti ti-arrow-left text-lg text-gray-500" />
+    <div className="flex-1 overflow-y-auto px-5 pt-14 pb-[108px] flex flex-col gap-4">
+      <div className="flex items-center gap-3">
+        <button
+          onClick={onBack}
+          aria-label="返回"
+          className="w-[38px] h-[38px] rounded-full bg-white border-none cursor-pointer flex items-center justify-center text-[#1C2430]"
+        >
+          <i className="ti ti-arrow-left text-[17px]" />
         </button>
         <div>
-          <h2 className="text-lg font-medium">{run.type}</h2>
-          <p className="text-xs text-gray-400 mt-0.5">{run.date}</p>
+          <h2 className="m-0 text-xl font-bold text-[#1C2430]">{run.type}</h2>
+          <p className="mt-0.5 mb-0 text-xs text-[#9AA3B0]">{subtitleParts.join('・')}</p>
         </div>
       </div>
 
-      {(hasLocation || hasWeather) && (
-        <div className="flex items-center justify-between bg-gray-50 rounded-lg px-3.5 py-2.5">
-          {hasLocation && (
-            <div className="flex items-center gap-1.5">
-              <i className="ti ti-map-pin text-sm text-gray-500" />
-              <span className="text-sm">{run.city}{run.country ? `, ${run.country}` : ''}</span>
-            </div>
-          )}
-          {hasWeather && (
-            <div className="flex items-center gap-2.5">
-              {run.temperatureC != null && (
-                <span className="flex items-center gap-1 text-sm">
-                  <i className="ti ti-temperature text-sm text-gray-500" />{run.temperatureC}°C
-                </span>
-              )}
-              {run.humidityPercent != null && (
-                <span className="flex items-center gap-1 text-sm">
-                  <i className="ti ti-droplet text-sm text-gray-500" />{run.humidityPercent}%
-                </span>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-
-      <div className="grid grid-cols-2 gap-2">
-        <div className="bg-gray-50 rounded-lg p-3.5">
-          <div className="flex justify-between gap-2">
-            <div>
-              <p className="text-xs text-gray-500 mb-1">距離</p>
-              <p className="text-lg font-medium">{run.distanceKm}<span className="text-[11px] text-gray-400"> km</span></p>
-            </div>
-            <div>
-              <p className="text-xs text-gray-500 mb-1">平均配速</p>
-              <p className="text-lg font-medium">{run.paceMinPerKm}<span className="text-[11px] text-gray-400"> /km</span></p>
-            </div>
+      <div
+        className="rounded-3xl p-5 text-white"
+        style={{ background: 'radial-gradient(130% 150% at 10% 0%, #93B8F8 0%, #2563EB 58%, #8C6F5A 135%)' }}
+      >
+        <div className="flex justify-between">
+          <div>
+            <p className="m-0 text-xs opacity-85">距離</p>
+            <p className="mt-1 mb-0 text-[26px] font-medium font-[Outfit]">
+              {run.distanceKm}
+              <span className="text-[13px] opacity-85"> km</span>
+            </p>
           </div>
-        </div>
-        <div className="bg-gray-50 rounded-lg p-3.5">
-          <p className="text-xs text-gray-500 mb-1">時間</p>
-          <p className="text-lg font-medium">{run.durationMin ?? '--'}<span className="text-[11px] text-gray-400"> 分</span></p>
-        </div>
-        <div className="bg-gray-50 rounded-lg p-3.5">
-          <p className="text-xs text-gray-500 mb-1">平均步幅</p>
-          <p className="text-lg font-medium">{run.strideM ?? '--'}<span className="text-[11px] text-gray-400"> m</span></p>
-        </div>
-        <div className="bg-gray-50 rounded-lg p-3.5">
-          <p className="text-xs text-gray-500 mb-1">平均步頻</p>
-          <p className="text-lg font-medium">{run.cadence ?? '--'}<span className="text-[11px] text-gray-400"> spm</span></p>
+          <div>
+            <p className="m-0 text-xs opacity-85">配速</p>
+            <p className="mt-1 mb-0 text-[26px] font-medium font-[Outfit]">{run.paceMinPerKm}</p>
+          </div>
+          <div>
+            <p className="m-0 text-xs opacity-85">時間</p>
+            <p className="mt-1 mb-0 text-[26px] font-medium font-[Outfit]">
+              {run.durationMin ?? '--'}
+              <span className="text-[13px] opacity-85"> 分</span>
+            </p>
+          </div>
         </div>
       </div>
 
-      <div className="bg-gray-50 rounded-xl p-4">
-        <p className="text-sm text-gray-500 mb-3.5">心率</p>
-        <div className="flex justify-between mb-3">
-          <div><p className="text-xs text-gray-400">平均</p><p className="text-lg font-medium">{run.avgHeartRate || '--'}</p></div>
-          <div><p className="text-xs text-gray-400">最高</p><p className="text-lg font-medium">{run.maxHeartRate ?? '--'}</p></div>
-          <div><p className="text-xs text-gray-400">步頻</p><p className="text-lg font-medium">{run.cadence ?? '--'}</p></div>
-        </div>
-        {zones.length > 0 && (
-          <>
-            <div className="flex h-2 rounded overflow-hidden mb-1.5">
-              {zones.map((z) => (
-                <div key={z.zone} style={{ width: `${z.percent}%`, backgroundColor: z.color }} />
-              ))}
-            </div>
-            <div className="flex justify-between text-[11px] text-gray-400 mb-3">
-              {zones.map((z) => <span key={z.zone}>{z.zone}</span>)}
-            </div>
-            <div className="flex flex-col gap-1.5">
-              {zones.map((z) => (
-                <div key={z.zone} className="flex justify-between items-center text-sm">
-                  <span className="flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: z.color }} />
-                    {z.zone} {z.label}
-                  </span>
-                  <span className="text-gray-400">{z.minutes}分・{z.percent}%</span>
-                </div>
-              ))}
-            </div>
-          </>
-        )}
+      <div className="grid grid-cols-2 gap-2.5">
+        <MetricCard label="平均心率" value={run.avgHeartRate || '--'} unit="bpm" />
+        <MetricCard label="最高心率" value={run.maxHeartRate ?? '--'} unit="bpm" />
+        <MetricCard label="平均步頻" value={run.cadence ?? '--'} unit="spm" />
+        <MetricCard label="平均步幅" value={run.strideM ?? '--'} unit="m" />
       </div>
 
-      {run.aerobicPercent != null && run.anaerobicPercent != null && (
-        <div className="bg-gray-50 rounded-xl p-4">
-          <p className="text-sm text-gray-500 mb-2">有氧 / 無氧比例</p>
-          <div className="flex h-3.5 rounded-full overflow-hidden mb-2">
-            <div className="bg-teal-500" style={{ width: `${run.aerobicPercent}%` }} />
-            <div className="bg-orange-500" style={{ width: `${run.anaerobicPercent}%` }} />
+      {zones.length > 0 && (
+        <div className="bg-white rounded-3xl p-[18px]">
+          <p className="m-0 mb-3 text-sm font-bold text-[#1C2430]">心率區間</p>
+          <div className="flex h-2.5 rounded-full overflow-hidden mb-3.5">
+            {zones.map((z) => (
+              <div key={z.zone} style={{ width: `${z.percent}%`, backgroundColor: ZONE_COLOR[z.zone] }} />
+            ))}
           </div>
-          <div className="flex justify-between text-xs">
-            <span className="flex items-center gap-1.5 text-teal-800">
-              <span className="w-2 h-2 rounded-full inline-block bg-teal-500" />有氧 {run.aerobicPercent}%
-            </span>
-            <span className="flex items-center gap-1.5 text-orange-800">
-              <span className="w-2 h-2 rounded-full inline-block bg-orange-500" />無氧 {run.anaerobicPercent}%
-            </span>
-          </div>
-        </div>
-      )}
-
-      {splits.length > 0 && (
-        <div className="bg-gray-50 rounded-xl p-4">
-          <p className="text-sm text-gray-500 mb-3">分段配速</p>
           <div className="flex flex-col gap-2">
-            {splits.map((s) => (
-              <div key={s.km} className="flex justify-between text-sm">
-                <span className="text-gray-400">{s.km} km</span>
-                <span className="font-medium">{s.pace}</span>
+            {zones.map((z) => (
+              <div key={z.zone} className="flex justify-between items-center text-[13px]">
+                <span className="flex items-center gap-2 text-[#1C2430]">
+                  <span className="w-2 h-2 rounded-full inline-block" style={{ background: ZONE_COLOR[z.zone] }} />
+                  {z.zone} {z.label}
+                </span>
+                <span className="text-[#9AA3B0] font-[Outfit]">
+                  {z.minutes}分・{z.percent}%
+                </span>
               </div>
             ))}
           </div>
         </div>
       )}
 
-      {run.coachFeedback && (
-        <div className="bg-blue-50 rounded-xl p-4">
-          <div className="flex items-center gap-1.5 mb-2">
-            <i className="ti ti-sparkles text-sm text-blue-600" />
-            <span className="text-xs text-blue-600">教練回饋</span>
+      {splits.length > 0 && (
+        <div className="bg-white rounded-3xl p-[18px]">
+          <p className="m-0 mb-3 text-sm font-bold text-[#1C2430]">分段配速</p>
+          <div className="flex flex-col gap-2.5">
+            {splits.map((s) => {
+              const sec = paceSeconds(s.pace);
+              const pct = sec > 0 ? Math.round((fastestSec / sec) * 100) : 0;
+              return (
+                <div key={s.km} className="flex items-center gap-3 text-[13px]">
+                  <span className="text-[#9AA3B0] w-[34px] font-[Outfit]">{s.km} km</span>
+                  <span className="flex-1 h-1.5 rounded-full bg-[#EEF1F6] relative">
+                    <span
+                      className="absolute inset-y-0 left-0 rounded-full"
+                      style={{ width: `${pct}%`, background: 'linear-gradient(90deg,#60A5FA,#2563EB)' }}
+                    />
+                  </span>
+                  <span className="font-medium text-[#1C2430] font-[Outfit]">{s.pace}</span>
+                </div>
+              );
+            })}
           </div>
-          <p className="text-sm leading-relaxed">{run.coachFeedback}</p>
         </div>
       )}
 
-      <BottomNav active={activeTab} onChange={onTabChange} />
+      {run.coachFeedback && (
+        <div className="rounded-3xl p-[18px]" style={{ background: 'linear-gradient(135deg,#FFE9D6 0%,#E7DACB 100%)' }}>
+          <div className="flex items-center gap-2 mb-2">
+            <i className="ti ti-sparkles text-[15px] text-[#C2570F]" />
+            <span className="text-xs font-bold text-[#C2570F]">教練回饋</span>
+          </div>
+          <p className="m-0 text-[13px] leading-[1.7] text-[#4B4238]">{run.coachFeedback}</p>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3/dist/tabler-icons.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+body { margin: 0; background: #E8F1FF; font-family: 'Noto Sans TC', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+a { color: #4A6FB5; text-decoration: none; }
+a:hover { color: #37548C; }
+::-webkit-scrollbar { display: none; }
+[data-screen-label] > * { flex-shrink: 0; }
+</style>
+</helmet>
+
+<div style="width: 100%; max-width: 430px; margin: 0 auto; height: 100dvh; background: linear-gradient(170deg, #E8F1FF 0%, #F7F9FF 45%, #FFF0E2 100%); box-shadow: 0 0 60px rgba(28,36,48,0.10); overflow: hidden; box-sizing: border-box; display: flex; flex-direction: column; position: relative;">
+
+        <!-- 看板 -->
+        <sc-if value="{{ cDash }}" hint-placeholder-val="{{ true }}">
+          <div data-screen-label="看板" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; padding: 56px 20px 108px; gap: 20px; box-sizing: border-box;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <p style="margin: 0; font-size: 13px; color: #9AA3B0;">{{ todayLabel }}</p>
+                <h2 style="margin: 4px 0 0; font-size: 24px; font-weight: 700; color: #1C2430;">早安，Sasha</h2>
+              </div>
+              <button onClick="{{ cSync }}" style="display: flex; align-items: center; gap: 6px; background: #FFE9D6; color: #C2570F; font-size: 12px; font-weight: 500; padding: 8px 14px; border-radius: 999px; border: none; cursor: pointer; font-family: inherit;">
+                <i class="ti ti-refresh" style="font-size: 13px;"></i>{{ syncLabelC }}
+              </button>
+            </div>
+
+            <div style="display: flex; gap: 6px;">
+              <sc-for list="{{ weekStripC }}" as="d" hint-placeholder-count="7">
+                <button onClick="{{ d.onTap }}" style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 0 8px; border-radius: 16px; border: none; cursor: pointer; font-family: inherit; background: {{ d.bg }}; box-shadow: {{ d.shadow }};">
+                  <span style="font-size: 16px; font-weight: 600; font-family: 'Outfit', sans-serif; color: {{ d.numColor }};">{{ d.num }}</span>
+                  <span style="font-size: 10px; letter-spacing: 0.5px; color: {{ d.labColor }};">{{ d.lab }}</span>
+                  <span style="width: 4px; height: 4px; border-radius: 50%; background: {{ d.dot }};"></span>
+                </button>
+              </sc-for>
+            </div>
+
+            <div style="border-radius: 28px; padding: 24px; color: #ffffff; background: radial-gradient(120% 140% at 8% 0%, #93B8F8 0%, #4C82F0 34%, #2563EB 62%, #F97316 130%); box-shadow: 0 16px 36px rgba(37,99,235,0.32); position: relative; overflow: hidden;">
+              <div style="position: absolute; right: -40px; bottom: -60px; width: 200px; height: 200px; border-radius: 50%; background: radial-gradient(circle, rgba(253,186,116,0.55) 0%, rgba(253,186,116,0) 70%);"></div>
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; position: relative;">
+                <div>
+                  <p style="margin: 0; font-size: 13px; opacity: 0.85;">本週跑量</p>
+                  <p style="margin: 6px 0 0; font-size: 44px; font-weight: 500; font-family: 'Outfit', sans-serif; line-height: 1;">36.1<span style="font-size: 17px; font-weight: 400; opacity: 0.85;"> / {{ goalKm }} km</span></p>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                  <button onClick="{{ cGoFit }}" aria-label="體能" style="width: 40px; height: 40px; border-radius: 50%; border: none; cursor: pointer; background: rgba(255,255,255,0.22); color: #ffffff; display: flex; align-items: center; justify-content: center;"><i class="ti ti-heartbeat" style="font-size: 18px;"></i></button>
+                  <button onClick="{{ cGoCoach }}" aria-label="教練" style="width: 40px; height: 40px; border-radius: 50%; border: none; cursor: pointer; background: rgba(255,255,255,0.22); color: #ffffff; display: flex; align-items: center; justify-content: center;"><i class="ti ti-message-circle" style="font-size: 18px;"></i></button>
+                </div>
+              </div>
+              <div style="margin-top: 18px; height: 8px; border-radius: 999px; background: rgba(255,255,255,0.28); position: relative;">
+                <div style="position: absolute; inset: 0 auto 0 0; width: {{ weekPct }}; border-radius: 999px; background: #ffffff;"></div>
+              </div>
+              <p style="margin: 12px 0 0; font-size: 13px; opacity: 0.9; position: relative;">還差 {{ remainKm }} km・下一課：明天 輕鬆跑 5K</p>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
+              <div style="background: #ffffff; border-radius: 20px; padding: 14px 14px 12px;">
+                <p style="margin: 0; font-size: 11px; color: #9AA3B0;">最近配速</p>
+                <p style="margin: 6px 0 0; font-size: 19px; font-weight: 500; font-family: 'Outfit', sans-serif; color: #1C2430;">5'45"</p>
+              </div>
+              <div style="background: #ffffff; border-radius: 20px; padding: 14px 14px 12px;">
+                <p style="margin: 0; font-size: 11px; color: #9AA3B0;">平均心率</p>
+                <p style="margin: 6px 0 0; font-size: 19px; font-weight: 500; font-family: 'Outfit', sans-serif; color: #1C2430;">148</p>
+              </div>
+              <div style="background: #ffffff; border-radius: 20px; padding: 14px 14px 12px;">
+                <p style="margin: 0; font-size: 11px; color: #9AA3B0;">VO2max</p>
+                <p style="margin: 6px 0 0; font-size: 19px; font-weight: 500; font-family: 'Outfit', sans-serif; color: #2563EB;">52</p>
+              </div>
+            </div>
+
+            <div>
+              <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 12px;">
+                <p style="margin: 0; font-size: 16px; font-weight: 700; color: #1C2430;">近期訓練課表</p>
+                <button onClick="{{ cGoHist }}" style="background: none; border: none; cursor: pointer; font-size: 13px; color: #2563EB; font-family: inherit; padding: 0;">歷史數據 →</button>
+              </div>
+              <div style="display: flex; flex-direction: column;">
+                <sc-for list="{{ timelineC }}" as="t" hint-placeholder-count="3">
+                  <div style="display: flex; gap: 14px;">
+                    <div style="display: flex; flex-direction: column; align-items: center; width: 44px; flex-shrink: 0;">
+                      <span style="font-size: 12px; font-weight: 600; color: #C2570F; font-family: 'Outfit', sans-serif;">{{ t.date }}</span>
+                      <span style="width: 8px; height: 8px; border-radius: 50%; margin-top: 6px; background: {{ t.dotColor }}; box-shadow: 0 0 0 3px {{ t.dotRing }};"></span>
+                      <span style="width: 2px; flex: 1; background: #E4DFD7; margin-top: 4px;"></span>
+                    </div>
+                    <div style="flex: 1; background: #ffffff; border-radius: 20px; padding: 14px 16px; margin-bottom: 12px; display: flex; align-items: center; gap: 12px;">
+                      <span style="width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; background: {{ t.iconBg }}; color: {{ t.iconColor }};"><i class="ti {{ t.icon }}" style="font-size: 17px;"></i></span>
+                      <div>
+                        <p style="margin: 0; font-size: 14px; font-weight: 500; color: #1C2430;">{{ t.title }}</p>
+                        <p style="margin: 2px 0 0; font-size: 12px; color: #9AA3B0;">{{ t.sub }}</p>
+                      </div>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- 歷史 -->
+        <sc-if value="{{ cHist }}" hint-placeholder-val="{{ false }}">
+          <div data-screen-label="歷史" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; padding: 56px 20px 108px; gap: 18px; box-sizing: border-box;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <button onClick="{{ cGoDash }}" aria-label="返回" style="width: 38px; height: 38px; border-radius: 50%; background: #ffffff; border: none; cursor: pointer; color: #1C2430; display: flex; align-items: center; justify-content: center;"><i class="ti ti-arrow-left" style="font-size: 17px;"></i></button>
+              <div>
+                <h2 style="margin: 0; font-size: 20px; font-weight: 700; color: #1C2430;">歷史數據</h2>
+                <p style="margin: 2px 0 0; font-size: 12px; color: #9AA3B0;">已同步 Garmin</p>
+              </div>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <div style="flex: 1.25; background: linear-gradient(135deg, #DBEAFE 0%, #BFD7FB 100%); border-radius: 20px; padding: 14px;">
+                <p style="margin: 0; font-size: 11px; color: #37548C;">本月累積里程</p>
+                <p style="margin: 6px 0 0; font-size: 21px; font-weight: 500; font-family: 'Outfit', sans-serif; color: #1C2430;">{{ monthKm }} <span style="font-size: 12px; color: #6A7482;">km</span></p>
+              </div>
+              <div style="flex: 1; background: linear-gradient(135deg, #FFE9D6 0%, #FDBA74 100%); border-radius: 20px; padding: 14px;">
+                <p style="margin: 0; font-size: 11px; color: #C2570F;">本月跑步</p>
+                <p style="margin: 6px 0 0; font-size: 21px; font-weight: 500; font-family: 'Outfit', sans-serif; color: #1C2430;">{{ monthCount }} <span style="font-size: 12px; color: #6A7482;">次</span></p>
+              </div>
+              <div style="flex: 1; background: #ffffff; border-radius: 20px; padding: 14px;">
+                <p style="margin: 0; font-size: 11px; color: #9AA3B0;">累積跑步</p>
+                <p style="margin: 6px 0 0; font-size: 21px; font-weight: 500; font-family: 'Outfit', sans-serif; color: #1C2430;">{{ totalCount }} <span style="font-size: 12px; color: #6A7482;">次</span></p>
+              </div>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+              <sc-for list="{{ runsC }}" as="run" hint-placeholder-count="6">
+                <button onClick="{{ run.onSelect }}" style="display: flex; align-items: center; gap: 12px; background: #ffffff; border-radius: 20px; padding: 14px 16px; text-align: left; border: none; cursor: pointer; font-family: inherit;" style-hover="background: #FBFAF8;">
+                  <span style="width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; background: {{ run.iconBg }}; color: {{ run.iconColor }};"><i class="ti {{ run.icon }}" style="font-size: 18px;"></i></span>
+                  <div style="flex: 1;">
+                    <p style="margin: 0; font-size: 14px; font-weight: 500; color: #1C2430;">{{ run.title }}</p>
+                    <p style="margin: 2px 0 0; font-size: 12px; color: #9AA3B0;">{{ run.meta }}</p>
+                  </div>
+                  <i class="ti ti-chevron-right" style="color: #C4CAD3;"></i>
+                </button>
+              </sc-for>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: center; gap: 16px; padding: 2px 0;">
+              <button onClick="{{ prevPage }}" aria-label="上一頁" style="width: 36px; height: 36px; border-radius: 50%; border: none; cursor: pointer; background: #ffffff; color: {{ prevColor }}; display: flex; align-items: center; justify-content: center;"><i class="ti ti-chevron-left" style="font-size: 16px;"></i></button>
+              <span style="font-size: 13px; color: #6A7482; font-family: 'Outfit', sans-serif;">{{ histPageLabel }}</span>
+              <button onClick="{{ nextPage }}" aria-label="下一頁" style="width: 36px; height: 36px; border-radius: 50%; border: none; cursor: pointer; background: #ffffff; color: {{ nextColor }}; display: flex; align-items: center; justify-content: center;"><i class="ti ti-chevron-right" style="font-size: 16px;"></i></button>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- 詳情 -->
+        <sc-if value="{{ cDetail }}" hint-placeholder-val="{{ false }}">
+          <div data-screen-label="跑步詳情" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; padding: 56px 20px 108px; gap: 16px; box-sizing: border-box;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <button onClick="{{ cGoHist }}" aria-label="返回" style="width: 38px; height: 38px; border-radius: 50%; background: #ffffff; border: none; cursor: pointer; color: #1C2430; display: flex; align-items: center; justify-content: center;"><i class="ti ti-arrow-left" style="font-size: 17px;"></i></button>
+              <div>
+                <h2 style="margin: 0; font-size: 20px; font-weight: 700; color: #1C2430;">{{ dC.type }}</h2>
+                <p style="margin: 2px 0 0; font-size: 12px; color: #9AA3B0;">{{ dC.date }}・台北 31°C・74%</p>
+              </div>
+            </div>
+            <div style="border-radius: 24px; padding: 20px; color: #ffffff; background: radial-gradient(130% 150% at 10% 0%, #93B8F8 0%, #2563EB 58%, #8C6F5A 135%);">
+              <div style="display: flex; justify-content: space-between;">
+                <div><p style="margin: 0; font-size: 12px; opacity: 0.85;">距離</p><p style="margin: 4px 0 0; font-size: 26px; font-weight: 500; font-family: 'Outfit', sans-serif;">{{ dC.distanceKm }}<span style="font-size: 13px; opacity: 0.85;"> km</span></p></div>
+                <div><p style="margin: 0; font-size: 12px; opacity: 0.85;">配速</p><p style="margin: 4px 0 0; font-size: 26px; font-weight: 500; font-family: 'Outfit', sans-serif;">{{ dC.pace }}</p></div>
+                <div><p style="margin: 0; font-size: 12px; opacity: 0.85;">時間</p><p style="margin: 4px 0 0; font-size: 26px; font-weight: 500; font-family: 'Outfit', sans-serif;">{{ dC.durationMin }}<span style="font-size: 13px; opacity: 0.85;"> 分</span></p></div>
+              </div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+              <div style="background: #ffffff; border-radius: 20px; padding: 14px 16px;"><p style="margin: 0; font-size: 11px; color: #9AA3B0;">平均心率</p><p style="margin: 4px 0 0; font-size: 18px; font-weight: 500; font-family: 'Outfit', sans-serif; color: #1C2430;">{{ dC.avgHeartRate }} <span style="font-size: 11px; color: #9AA3B0;">bpm</span></p></div>
+              <div style="background: #ffffff; border-radius: 20px; padding: 14px 16px;"><p style="margin: 0; font-size: 11px; color: #9AA3B0;">最高心率</p><p style="margin: 4px 0 0; font-size: 18px; font-weight: 500; font-family: 'Outfit', sans-serif; color: #1C2430;">{{ dC.maxHeartRate }} <span style="font-size: 11px; color: #9AA3B0;">bpm</span></p></div>
+              <div style="background: #ffffff; border-radius: 20px; padding: 14px 16px;"><p style="margin: 0; font-size: 11px; color: #9AA3B0;">平均步頻</p><p style="margin: 4px 0 0; font-size: 18px; font-weight: 500; font-family: 'Outfit', sans-serif; color: #1C2430;">{{ dC.cadence }} <span style="font-size: 11px; color: #9AA3B0;">spm</span></p></div>
+              <div style="background: #ffffff; border-radius: 20px; padding: 14px 16px;"><p style="margin: 0; font-size: 11px; color: #9AA3B0;">平均步幅</p><p style="margin: 4px 0 0; font-size: 18px; font-weight: 500; font-family: 'Outfit', sans-serif; color: #1C2430;">{{ dC.strideM }} <span style="font-size: 11px; color: #9AA3B0;">m</span></p></div>
+            </div>
+            <div style="background: #ffffff; border-radius: 24px; padding: 18px;">
+              <p style="margin: 0 0 12px; font-size: 14px; font-weight: 700; color: #1C2430;">心率區間</p>
+              <div style="display: flex; height: 10px; border-radius: 999px; overflow: hidden; margin-bottom: 14px;">
+                <sc-for list="{{ zonesC }}" as="z" hint-placeholder-count="5">
+                  <div style="width: {{ z.widthPct }}; background-color: {{ z.color }};"></div>
+                </sc-for>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 8px;">
+                <sc-for list="{{ zonesC }}" as="z" hint-placeholder-count="5">
+                  <div style="display: flex; justify-content: space-between; align-items: center; font-size: 13px;">
+                    <span style="display: flex; align-items: center; gap: 8px; color: #1C2430;"><span style="width: 8px; height: 8px; border-radius: 50%; display: inline-block; background-color: {{ z.color }};"></span>{{ z.zone }} {{ z.label }}</span>
+                    <span style="color: #9AA3B0; font-family: 'Outfit', sans-serif;">{{ z.detail }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+            <div style="background: #ffffff; border-radius: 24px; padding: 18px;">
+              <p style="margin: 0 0 12px; font-size: 14px; font-weight: 700; color: #1C2430;">分段配速</p>
+              <div style="display: flex; flex-direction: column; gap: 10px;">
+                <sc-for list="{{ splitsC }}" as="s" hint-placeholder-count="5">
+                  <div style="display: flex; align-items: center; gap: 12px; font-size: 13px;">
+                    <span style="color: #9AA3B0; width: 34px; font-family: 'Outfit', sans-serif;">{{ s.km }} km</span>
+                    <span style="flex: 1; height: 6px; border-radius: 999px; background: #EEF1F6; position: relative;"><span style="position: absolute; inset: 0 auto 0 0; width: {{ s.barPct }}; border-radius: 999px; background: linear-gradient(90deg, #60A5FA, #2563EB);"></span></span>
+                    <span style="font-weight: 500; color: #1C2430; font-family: 'Outfit', sans-serif;">{{ s.pace }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+            <div style="background: linear-gradient(135deg, #FFE9D6 0%, #E7DACB 100%); border-radius: 24px; padding: 18px;">
+              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                <i class="ti ti-sparkles" style="font-size: 15px; color: #C2570F;"></i>
+                <span style="font-size: 12px; font-weight: 700; color: #C2570F;">教練回饋</span>
+              </div>
+              <p style="margin: 0; font-size: 13px; line-height: 1.7; color: #4B4238;">{{ dC.feedback }}</p>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- 教練 -->
+        <sc-if value="{{ cCoach }}" hint-placeholder-val="{{ false }}">
+          <div data-screen-label="AI 教練" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; padding: 56px 20px 108px; gap: 16px; box-sizing: border-box;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <span style="width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: radial-gradient(circle at 30% 25%, #93B8F8, #2563EB 70%); color: #ffffff;"><i class="ti ti-sparkles" style="font-size: 20px;"></i></span>
+              <div>
+                <h2 style="margin: 0; font-size: 20px; font-weight: 700; color: #1C2430;">AI 教練</h2>
+                <p style="margin: 2px 0 0; font-size: 12px; color: #9AA3B0;">根據 Garmin 數據即時分析</p>
+              </div>
+            </div>
+            <div style="flex: 1; display: flex; flex-direction: column; gap: 10px; min-height: 0; overflow-y: auto;">
+              <sc-for list="{{ msgsC }}" as="m" hint-placeholder-count="1">
+                <div style="max-width: 82%; border-radius: 20px; padding: 12px 16px; font-size: 14px; line-height: 1.7; align-self: {{ m.align }}; background: {{ m.bg }}; color: {{ m.color }}; border-bottom-left-radius: {{ m.blr }}; border-bottom-right-radius: {{ m.brr }};">{{ m.text }}</div>
+              </sc-for>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button onClick="{{ askLoadC }}" style="font-size: 12px; padding: 9px 14px; border: 1px solid #DCD5CA; border-radius: 999px; background: #ffffff; cursor: pointer; font-family: inherit; color: #C2570F;">訓練負荷分析</button>
+              <button onClick="{{ askZonesC }}" style="font-size: 12px; padding: 9px 14px; border: 1px solid #BFD7FB; border-radius: 999px; background: #ffffff; cursor: pointer; font-family: inherit; color: #37548C;">心率區間</button>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px; background: #ffffff; border-radius: 999px; padding: 8px 8px 8px 18px; box-shadow: 0 4px 14px rgba(28,36,48,0.06);">
+              <input type="text" value="{{ inputC }}" onChange="{{ onInputC }}" onKeyDown="{{ onKeyC }}" placeholder="問問今天該怎麼訓練" style="border: none; flex: 1; font-size: 14px; background: transparent; outline: none; font-family: inherit; color: #1C2430;">
+              <button onClick="{{ onSendC }}" aria-label="送出" style="width: 38px; height: 38px; border-radius: 50%; border: none; cursor: pointer; background: #2563EB; color: #ffffff; display: flex; align-items: center; justify-content: center;"><i class="ti ti-send" style="font-size: 16px;"></i></button>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- 體能 -->
+        <sc-if value="{{ cFit }}" hint-placeholder-val="{{ false }}">
+          <div data-screen-label="體能狀態" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; padding: 56px 20px 108px; gap: 16px; box-sizing: border-box;">
+            <div>
+              <h2 style="margin: 0; font-size: 20px; font-weight: 700; color: #1C2430;">體能狀態</h2>
+              <p style="margin: 2px 0 0; font-size: 12px; color: #9AA3B0;">Garmin 每日體能指標</p>
+            </div>
+            <div style="display: flex; gap: 10px;">
+              <div style="flex: 1; background: #ffffff; border-radius: 24px; padding: 18px; display: flex; flex-direction: column; align-items: center; gap: 8px;">
+                <svg width="84" height="84" viewBox="0 0 84 84">
+                  <circle cx="42" cy="42" r="36" fill="none" stroke="#EEF1F6" stroke-width="7"></circle>
+                  <circle cx="42" cy="42" r="36" fill="none" stroke="#2563EB" stroke-width="7" stroke-linecap="round" stroke-dasharray="226" stroke-dashoffset="52" transform="rotate(-90 42 42)"></circle>
+                  <text x="42" y="48" text-anchor="middle" font-size="20" font-family="Outfit, sans-serif" font-weight="500" fill="#1C2430">52</text>
+                </svg>
+                <p style="margin: 0; font-size: 12px; color: #6A7482;">VO2max</p>
+              </div>
+              <div style="flex: 1; background: #ffffff; border-radius: 24px; padding: 18px; display: flex; flex-direction: column; align-items: center; gap: 8px;">
+                <svg width="84" height="84" viewBox="0 0 84 84">
+                  <circle cx="42" cy="42" r="36" fill="none" stroke="#F0EAE2" stroke-width="7"></circle>
+                  <circle cx="42" cy="42" r="36" fill="none" stroke="#F97316" stroke-width="7" stroke-linecap="round" stroke-dasharray="226" stroke-dashoffset="90" transform="rotate(-90 42 42)"></circle>
+                  <text x="42" y="48" text-anchor="middle" font-size="20" font-family="Outfit, sans-serif" font-weight="500" fill="#1C2430">251</text>
+                </svg>
+                <p style="margin: 0; font-size: 12px; color: #6A7482;">7 天負荷（分鐘）</p>
+              </div>
+            </div>
+            <div style="background: #ffffff; border-radius: 24px; padding: 18px;">
+              <p style="margin: 0 0 14px; font-size: 14px; font-weight: 700; color: #1C2430;">7 天訓練負荷</p>
+              <div style="display: flex; align-items: flex-end; gap: 8px; height: 90px;">
+                <sc-for list="{{ loadBarsC }}" as="bar" hint-placeholder-count="7">
+                  <div style="flex: 1; display: flex; flex-direction: column; justify-content: flex-end; height: 100%;">
+                    <div style="border-radius: 999px; background: {{ bar.color }}; height: {{ bar.height }};"></div>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="display: flex; gap: 8px; margin-top: 8px;">
+                <span style="flex: 1; text-align: center; font-size: 10px; color: #9AA3B0;">一</span><span style="flex: 1; text-align: center; font-size: 10px; color: #9AA3B0;">二</span><span style="flex: 1; text-align: center; font-size: 10px; color: #9AA3B0;">三</span><span style="flex: 1; text-align: center; font-size: 10px; color: #9AA3B0;">四</span><span style="flex: 1; text-align: center; font-size: 10px; color: #9AA3B0;">五</span><span style="flex: 1; text-align: center; font-size: 10px; color: #9AA3B0;">六</span><span style="flex: 1; text-align: center; font-size: 10px; color: #9AA3B0;">日</span>
+              </div>
+            </div>
+            <div style="display: flex; gap: 10px;">
+              <div style="flex: 1; background: #ffffff; border-radius: 20px; padding: 16px;">
+                <div style="display: flex; align-items: center; gap: 6px;"><i class="ti ti-heart" style="font-size: 14px; color: #F97316;"></i><p style="margin: 0; font-size: 11px; color: #9AA3B0;">安靜心率</p></div>
+                <p style="margin: 8px 0 0; font-size: 20px; font-weight: 500; font-family: 'Outfit', sans-serif; color: #1C2430;">47 <span style="font-size: 12px; color: #9AA3B0;">bpm</span></p>
+              </div>
+              <div style="flex: 1; background: #ffffff; border-radius: 20px; padding: 16px;">
+                <div style="display: flex; align-items: center; gap: 6px;"><i class="ti ti-moon" style="font-size: 14px; color: #2563EB;"></i><p style="margin: 0; font-size: 11px; color: #9AA3B0;">睡眠分數</p></div>
+                <p style="margin: 8px 0 0; font-size: 20px; font-weight: 500; font-family: 'Outfit', sans-serif; color: #1C2430;">82</p>
+              </div>
+            </div>
+            <div style="background: linear-gradient(135deg, #DBEAFE 0%, #FFE9D6 100%); border-radius: 20px; padding: 16px; display: flex; align-items: center; gap: 12px;">
+              <i class="ti ti-battery-4" style="font-size: 24px; color: #37548C;"></i>
+              <div>
+                <p style="margin: 0; font-size: 14px; font-weight: 500; color: #1C2430;">恢復狀態良好</p>
+                <p style="margin: 2px 0 0; font-size: 12px; color: #6A7482;">建議恢復時間 18 小時，明天可正常訓練</p>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- 設定 -->
+        <sc-if value="{{ cSet }}" hint-placeholder-val="{{ false }}">
+          <div data-screen-label="設定" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; padding: 56px 20px 108px; gap: 16px; box-sizing: border-box;">
+            <div style="background: #ffffff; border-radius: 24px; padding: 16px 18px; display: flex; flex-direction: column; gap: 2px;">
+              <h2 style="margin: 0; font-size: 18px; font-weight: 500; color: #1C2430;">設定</h2>
+              <p style="margin: 2px 0 0; font-size: 12px; color: #9AA3B0;">此頁面尚未實作</p>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- 底部導覽 -->
+        <div style="position: absolute; left: 0; right: 0; bottom: 0; background: rgba(255,255,255,0.92); backdrop-filter: blur(12px); border-top: 1px solid #EFECE6; display: flex; justify-content: space-around; padding: 12px 8px 26px;">
+          <sc-for list="{{ navC }}" as="nav" hint-placeholder-count="5">
+            <button onClick="{{ nav.onClick }}" style="display: flex; flex-direction: column; align-items: center; gap: 3px; background: none; border: none; cursor: pointer; font-family: inherit; min-width: 52px;">
+              <i class="ti {{ nav.icon }}" style="font-size: 21px; color: {{ nav.color }};"></i>
+              <span style="font-size: 10px; color: {{ nav.color }}; font-weight: {{ nav.weight }};">{{ nav.label }}</span>
+            </button>
+          </sc-for>
+        </div>
+      </div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;weeklyGoalKm&quot;: {&quot;editor&quot;: &quot;int&quot;, &quot;default&quot;: 40, &quot;tsType&quot;: &quot;number&quot;, &quot;min&quot;: 10, &quot;max&quot;: 120, &quot;section&quot;: &quot;訓練&quot;, &quot;description&quot;: &quot;週跑量目標（km），會同步更新 hero 進度與圓環&quot;}}">
+const RUNS = [
+  { id: 'r1', date: '7月14日', type: '輕鬆跑', icon: 'ti-run', distanceKm: 5.2, pace: "5'45\"", hr: 148, durationMin: 30, maxHr: 172, cadence: 176, stride: 1.02, feedback: '這次輕鬆跑心率控制得很好，大部分時間維持在 Z2，有效累積有氧基礎。建議下次可以延長到 45 分鐘。' },
+  { id: 'r2', date: '7月12日', type: '間歇跑', icon: 'ti-bolt', distanceKm: 6.0, pace: "4'52\"", hr: 165, durationMin: 29, maxHr: 186, cadence: 184, stride: 1.18, feedback: '間歇段配速穩定，Z4-Z5 停留時間符合課表設計。注意組間恢復心率下降速度略慢，可能是疲勞累積的訊號。' },
+  { id: 'r3', date: '7月11日', type: '恢復跑', icon: 'ti-run', distanceKm: 4.0, pace: "6'20\"", hr: 132, durationMin: 25, maxHr: 145, cadence: 170, stride: 0.93, feedback: '恢復跑執行到位，心率全程壓在 Z1-Z2，有助於昨天間歇課的恢復。' },
+  { id: 'r4', date: '7月9日', type: '長距離跑', icon: 'ti-mountain', distanceKm: 16.2, pace: "5'58\"", hr: 152, durationMin: 97, maxHr: 168, cadence: 174, stride: 0.97, feedback: '長距離跑後段心率飄移約 8%，屬正常範圍。補給節奏可以再提早一點，避免 12K 後配速下滑。' },
+  { id: 'r5', date: '7月7日', type: '配速跑', icon: 'ti-bolt', distanceKm: 8.0, pace: "5'05\"", hr: 158, durationMin: 41, maxHr: 175, cadence: 180, stride: 1.10, feedback: '配速跑整體均速良好，第 5-6 公里稍快，注意節奏一致性會讓乳酸閾值訓練效果更好。' },
+  { id: 'r6', date: '7月5日', type: '輕鬆跑', icon: 'ti-run', distanceKm: 5.0, pace: "5'50\"", hr: 145, durationMin: 29, maxHr: 160, cadence: 175, stride: 1.00, feedback: '輕鬆跑節奏舒適，步頻穩定。持續保持這樣的有氧課即可。' },
+  { id: 'r7', date: '7月3日', type: '恢復跑', icon: 'ti-run', distanceKm: 4.5, pace: "6'15\"", hr: 130, durationMin: 28, maxHr: 142, cadence: 168, stride: 0.92, feedback: '恢復跑心率壓得很低，恢復品質良好。' },
+  { id: 'r8', date: '6月28日', type: '配速跑', icon: 'ti-bolt', distanceKm: 7.0, pace: "5'10\"", hr: 157, durationMin: 36, maxHr: 174, cadence: 179, stride: 1.08, feedback: '配速穩定貼近目標，閾值刺激充分。' },
+  { id: 'r9', date: '6月25日', type: '輕鬆跑', icon: 'ti-run', distanceKm: 5.5, pace: "5'48\"", hr: 146, durationMin: 32, maxHr: 161, cadence: 175, stride: 1.00, feedback: '有氧課執行良好，心率大多維持 Z2。' },
+  { id: 'r10', date: '6月22日', type: '長距離跑', icon: 'ti-mountain', distanceKm: 14.0, pace: "6'02\"", hr: 150, durationMin: 85, maxHr: 165, cadence: 173, stride: 0.96, feedback: '長課後段配速略降，補給時機可再提前。' },
+  { id: 'r11', date: '6月19日', type: '間歇跑', icon: 'ti-bolt', distanceKm: 5.5, pace: "4'55\"", hr: 166, durationMin: 27, maxHr: 185, cadence: 183, stride: 1.16, feedback: '間歇段輸出穩定，恢復段心率下降正常。' },
+  { id: 'r12', date: '6月16日', type: '恢復跑', icon: 'ti-run', distanceKm: 4.0, pace: "6'25\"", hr: 128, durationMin: 26, maxHr: 140, cadence: 167, stride: 0.91, feedback: '恢復跑節奏放鬆，恢復品質良好。' },
+];
+
+const ZONES = [
+  { zone: 'Z1', label: '熱身', minutes: 3, percent: 10, color: '#B9CDEB' },
+  { zone: 'Z2', label: '輕鬆', minutes: 18, percent: 60, color: '#7C9CE8' },
+  { zone: 'Z3', label: '有氧', minutes: 6, percent: 20, color: '#4A6FB5' },
+  { zone: 'Z4', label: '閾值', minutes: 2, percent: 7, color: '#A08265' },
+  { zone: 'Z5', label: '無氧', minutes: 1, percent: 3, color: '#6F5B49' },
+];
+
+const SPLITS = [
+  { km: 1, pace: "5'52\"", sec: 352 },
+  { km: 2, pace: "5'47\"", sec: 347 },
+  { km: 3, pace: "5'44\"", sec: 344 },
+  { km: 4, pace: "5'40\"", sec: 340 },
+  { km: 5, pace: "5'42\"", sec: 342 },
+];
+
+const LOAD = [30, 0, 29, 25, 0, 97, 41];
+const WEEK_TOTAL = 36.1;
+const GREET = '早安！我是你的 AI 跑步教練，已經讀取了你的 Garmin 訓練數據。今天想聊什麼？';
+
+const ICON_STYLES = {
+  '輕鬆跑': { bg: '#DDE7F5', color: '#4A6FB5' },
+  '恢復跑': { bg: '#DDE7F5', color: '#4A6FB5' },
+  '間歇跑': { bg: '#EFE7DD', color: '#A08265' },
+  '配速跑': { bg: '#EFE7DD', color: '#A08265' },
+  '長距離跑': { bg: '#E4E0F0', color: '#6D6398' },
+};
+
+const ICON_C = {
+  '輕鬆跑': { bg: '#DBEAFE', color: '#2563EB' },
+  '恢復跑': { bg: '#DBEAFE', color: '#2563EB' },
+  '間歇跑': { bg: '#FFE9D6', color: '#F97316' },
+  '配速跑': { bg: '#FFE9D6', color: '#F97316' },
+  '長距離跑': { bg: '#FFE4CC', color: '#EA5B23' },
+};
+const ZONE_C = ['#BFD7FB', '#60A5FA', '#2563EB', '#F97316', '#C2570F'];
+
+class Component extends DCLogic {
+  state = {
+    tabA: 'dashboard', runA: null, syncingA: false, inputA: '',
+    msgsA: [{ from: 'coach', text: GREET }],
+    tabB: 'dashboard', runB: null, inputB: '',
+    msgsB: [{ from: 'coach', text: GREET }],
+    filterB: '全部',
+    tabC: 'dashboard', runC: null, syncingC: false, inputC: '', histPage: 0,
+    msgsC: [{ from: 'coach', text: GREET }],
+  };
+
+  reply(q) {
+    return q.includes('負荷')
+      ? '你這週訓練負荷 251 分鐘，比上週增加 12%，仍在安全範圍內。建議明天安排恢復跑。'
+      : '本週心率大多落在 Z2（58%），Z4 以上佔 11%，強度分配健康，符合 80/20 原則。';
+  }
+
+  askA(q) { this.setState((s) => ({ msgsA: [...s.msgsA, { from: 'user', text: q }, { from: 'coach', text: this.reply(q) }], inputA: '' })); }
+  askB(q) { this.setState((s) => ({ msgsB: [...s.msgsB, { from: 'user', text: q }, { from: 'coach', text: this.reply(q) }], inputB: '' })); }
+  askC(q) { this.setState((s) => ({ msgsC: [...s.msgsC, { from: 'user', text: q }, { from: 'coach', text: this.reply(q) }], inputC: '' })); }
+
+  renderVals() {
+    const { tabA, runA, syncingA, inputA, msgsA, tabB, runB, inputB, msgsB, filterB } = this.state;
+    const goal = this.props.weeklyGoalKm ?? 40;
+    const now = new Date();
+    const WD = ['日', '一', '二', '三', '四', '五', '六'];
+    const navDefs = [
+      { key: 'dashboard', label: '看板', icon: 'ti-layout-dashboard' },
+      { key: 'history', label: '歷史', icon: 'ti-history' },
+      { key: 'coach', label: '教練', icon: 'ti-message-circle' },
+      { key: 'fitness', label: '體能', icon: 'ti-heartbeat' },
+      { key: 'settings', label: '設定', icon: 'ti-settings' },
+    ];
+    const maxLoad = Math.max(...LOAD, 1);
+    const rA = RUNS.find((r) => r.id === runA);
+    const rB = RUNS.find((r) => r.id === runB);
+    const rC = RUNS.find((r) => r.id === this.state.runC);
+    const maxSec = Math.max(...SPLITS.map((s) => s.sec));
+
+    const runRow = (setter) => (r) => ({
+      icon: r.icon,
+      iconBg: ICON_STYLES[r.type].bg,
+      iconColor: ICON_STYLES[r.type].color,
+      title: `${r.date}・${r.type}`,
+      meta: `${r.pace}/km・${r.hr} bpm・${r.durationMin} 分`,
+      km: `${r.distanceKm} km`,
+      onSelect: () => this.setState(setter(r.id)),
+    });
+
+    const filters = ['全部', '輕鬆', '強度', '長距離'];
+    const shownRunsB = RUNS.filter((r) => {
+      if (filterB === '全部') return true;
+      if (filterB === '輕鬆') return r.type === '輕鬆跑' || r.type === '恢復跑';
+      if (filterB === '強度') return r.type === '間歇跑' || r.type === '配速跑';
+      return r.type === '長距離跑';
+    });
+
+    // Week strip: Mon-Sun around today (Wed 7/15)
+    const weekDays = [
+      { num: 13, lab: '一' }, { num: 14, lab: '二', run: true, runId: 'r1' }, { num: 15, lab: '三', today: true },
+      { num: 16, lab: '四', plan: true }, { num: 17, lab: '五', plan: true },
+      { num: 18, lab: '六' }, { num: 19, lab: '日', plan: true },
+    ];
+    const histPage = this.state.histPage ?? 0;
+    const histPages = Math.ceil(RUNS.length / 6);
+    const monthRuns = RUNS.filter((r) => r.date.startsWith('7月'));
+    const monthKm = Math.round(monthRuns.reduce((a, r) => a + r.distanceKm, 0) * 10) / 10;
+
+    return {
+      todayLabel: '7月15日 星期三',
+      runCount: RUNS.length,
+      goalKm: goal,
+      goalRingLabel: `目標 ${goal} km`,
+      remainKm: Math.max(0, Math.round((goal - WEEK_TOTAL) * 10) / 10),
+      weekPct: `${Math.min(100, Math.round((WEEK_TOTAL / goal) * 100))}%`,
+      ringOffset: 578 - Math.min(1, WEEK_TOTAL / goal) * 578,
+
+      // ---- A ----
+      aDash: tabA === 'dashboard' && !rA,
+      aHist: tabA === 'history' && !rA,
+      aDetail: !!rA,
+      aCoach: tabA === 'coach',
+      aFit: tabA === 'fitness',
+      aSet: tabA === 'settings',
+      aGoDash: () => this.setState({ tabA: 'dashboard', runA: null }),
+      aGoHist: () => this.setState({ tabA: 'history', runA: null }),
+      aGoCoach: () => this.setState({ tabA: 'coach', runA: null }),
+      aGoFit: () => this.setState({ tabA: 'fitness', runA: null }),
+      syncLabelA: syncingA ? '同步中...' : '同步 Garmin',
+      aSync: () => {
+        if (this.state.syncingA) return;
+        this.setState({ syncingA: true });
+        setTimeout(() => this.setState({ syncingA: false }), 1200);
+      },
+      navA: navDefs.map((n) => ({
+        ...n,
+        color: n.key === tabA && !rA ? '#4A6FB5' : (n.key === 'history' && rA ? '#4A6FB5' : '#B4BAC4'),
+        weight: n.key === tabA ? '700' : '400',
+        onClick: () => this.setState({ tabA: n.key, runA: null }),
+      })),
+      weekStrip: weekDays.map((d) => ({
+        num: d.num, lab: d.lab,
+        bg: d.today ? 'linear-gradient(160deg, #7C9CE8, #4A6FB5)' : '#ffffff',
+        shadow: d.today ? '0 8px 18px rgba(74,111,181,0.35)' : 'none',
+        numColor: d.today ? '#ffffff' : '#1C2430',
+        labColor: d.today ? 'rgba(255,255,255,0.8)' : '#9AA3B0',
+        dot: d.run ? (d.today ? '#ffffff' : '#A08265') : (d.plan ? '#C6D6EF' : 'transparent'),
+        noop: () => {},
+      })),
+      timeline: [
+        { date: '今天', dotColor: '#4A6FB5', dotRing: 'rgba(74,111,181,0.18)', icon: 'ti-run', iconBg: '#DDE7F5', iconColor: '#4A6FB5', title: '輕鬆跑 5K', sub: 'AI 課表・心率 Z2・約 30 分' },
+        { date: '7/17', dotColor: '#A08265', dotRing: 'rgba(160,130,101,0.18)', icon: 'ti-bolt', iconBg: '#EFE7DD', iconColor: '#A08265', title: '間歇 6 × 400m', sub: 'AI 課表・Z4・組間慢跑 200m' },
+        { date: '7/19', dotColor: '#6D6398', dotRing: 'rgba(109,99,152,0.18)', icon: 'ti-mountain', iconBg: '#E4E0F0', iconColor: '#6D6398', title: '長距離跑 14K', sub: 'AI 課表・Z2-Z3・週末長課' },
+      ],
+      runsA: RUNS.map(runRow((id) => ({ tabA: 'history', runA: id }))),
+      dA: rA ? { type: rA.type, date: rA.date, distanceKm: rA.distanceKm, pace: rA.pace, durationMin: rA.durationMin, avgHeartRate: rA.hr, maxHeartRate: rA.maxHr, cadence: rA.cadence, strideM: rA.stride, feedback: rA.feedback } : {},
+      zonesA: ZONES.map((z) => ({ ...z, widthPct: `${z.percent}%`, detail: `${z.minutes}分・${z.percent}%` })),
+      splitsA: SPLITS.map((s) => ({ ...s, barPct: `${Math.round((maxSec - s.sec + 30) / 60 * 100)}%` })),
+      loadBarsA: LOAD.map((v) => ({ height: `${Math.max((v / maxLoad) * 100, 4)}%`, color: v === maxLoad ? '#A08265' : '#B9CDEB' })),
+      msgsA: msgsA.map((m) => ({
+        text: m.text,
+        align: m.from === 'coach' ? 'flex-start' : 'flex-end',
+        bg: m.from === 'coach' ? '#ffffff' : 'linear-gradient(135deg, #7C9CE8, #4A6FB5)',
+        color: m.from === 'coach' ? '#2A3442' : '#ffffff',
+        blr: m.from === 'coach' ? '6px' : '20px',
+        brr: m.from === 'coach' ? '20px' : '6px',
+      })),
+      inputA,
+      onInputA: (e) => this.setState({ inputA: e.target.value }),
+      onKeyA: (e) => { if (e.key === 'Enter' && this.state.inputA.trim()) this.askA(this.state.inputA.trim()); },
+      onSendA: () => { if (this.state.inputA.trim()) this.askA(this.state.inputA.trim()); },
+      askLoadA: () => this.askA('分析我這週的訓練負荷'),
+      askZonesA: () => this.askA('我這週的心率區間分佈如何'),
+
+      // ---- B ----
+      bDash: tabB === 'dashboard' && !rB,
+      bHist: tabB === 'history' && !rB,
+      bDetail: !!rB,
+      bCoach: tabB === 'coach',
+      bFit: tabB === 'fitness',
+      bSet: tabB === 'settings',
+      bGoDash: () => this.setState({ tabB: 'dashboard', runB: null }),
+      bGoHist: () => this.setState({ tabB: 'history', runB: null }),
+      bGoCoach: () => this.setState({ tabB: 'coach', runB: null }),
+      bSync: () => {},
+      navB: navDefs.map((n) => ({
+        ...n,
+        bg: n.key === tabB ? 'rgba(255,255,255,0.16)' : 'transparent',
+        color: n.key === tabB ? '#ffffff' : 'rgba(255,255,255,0.55)',
+        onClick: () => this.setState({ tabB: n.key, runB: null }),
+      })),
+      chipStats: [
+        { label: '最近配速', value: "5'45\"", unit: '/km' },
+        { label: '平均心率', value: '148', unit: 'bpm' },
+        { label: 'VO2max', value: '52', unit: '' },
+        { label: '本月里程', value: '44.4', unit: 'km' },
+      ],
+      histFilters: filters.map((f) => ({
+        label: f,
+        bg: f === filterB ? '#1C2430' : 'rgba(255,255,255,0.75)',
+        color: f === filterB ? '#ffffff' : '#6A7482',
+        weight: f === filterB ? '700' : '400',
+        onClick: () => this.setState({ filterB: f }),
+      })),
+      runsB: shownRunsB.map(runRow((id) => ({ tabB: 'history', runB: id }))),
+      dB: rB ? { type: rB.type, date: rB.date, distanceKm: rB.distanceKm, pace: rB.pace, durationMin: rB.durationMin, avgHeartRate: rB.hr, maxHeartRate: rB.maxHr, cadence: rB.cadence, feedback: rB.feedback } : {},
+      zonesB: ZONES.map((z) => ({ ...z, widthPct: `${z.percent}%`, detail: `${z.minutes}分・${z.percent}%` })),
+      splitsB: SPLITS.map((s) => ({ ...s, barPct: `${Math.round((maxSec - s.sec + 30) / 60 * 100)}%` })),
+      loadBarsB: LOAD.map((v) => ({ height: `${Math.max((v / maxLoad) * 100, 4)}%`, color: v === maxLoad ? '#4A6FB5' : '#D9C7B4' })),
+      msgsB: msgsB.map((m) => ({
+        text: m.text,
+        align: m.from === 'coach' ? 'flex-start' : 'flex-end',
+        bg: m.from === 'coach' ? 'rgba(255,255,255,0.8)' : 'linear-gradient(135deg, #4A6FB5, #8C6F5A)',
+        color: m.from === 'coach' ? '#2A3442' : '#ffffff',
+      })),
+      inputB,
+      onInputB: (e) => this.setState({ inputB: e.target.value }),
+      onKeyB: (e) => { if (e.key === 'Enter' && this.state.inputB.trim()) this.askB(this.state.inputB.trim()); },
+      onSendB: () => { if (this.state.inputB.trim()) this.askB(this.state.inputB.trim()); },
+      askLoadB: () => this.askB('分析我這週的訓練負荷'),
+      askZonesB: () => this.askB('我這週的心率區間分佈如何'),
+
+      // ---- C (2a 藍橘) ----
+      cDash: this.state.tabC === 'dashboard' && !rC,
+      cHist: this.state.tabC === 'history' && !rC,
+      cDetail: !!rC,
+      cCoach: this.state.tabC === 'coach',
+      cFit: this.state.tabC === 'fitness',
+      cSet: this.state.tabC === 'settings',
+      cGoDash: () => this.setState({ tabC: 'dashboard', runC: null }),
+      cGoHist: () => this.setState({ tabC: 'history', runC: null }),
+      cGoCoach: () => this.setState({ tabC: 'coach', runC: null }),
+      cGoFit: () => this.setState({ tabC: 'fitness', runC: null }),
+      syncLabelC: this.state.syncingC ? '同步中...' : '同步 Garmin',
+      cSync: () => {
+        if (this.state.syncingC) return;
+        this.setState({ syncingC: true });
+        setTimeout(() => this.setState({ syncingC: false }), 1200);
+      },
+      navC: navDefs.map((n) => ({
+        ...n,
+        color: n.key === this.state.tabC && !rC ? '#2563EB' : (n.key === 'history' && rC ? '#2563EB' : '#B4BAC4'),
+        weight: n.key === this.state.tabC ? '700' : '400',
+        onClick: () => this.setState({ tabC: n.key, runC: null }),
+      })),
+      weekStripC: weekDays.map((d) => ({
+        num: d.num, lab: d.lab,
+        bg: d.today ? 'linear-gradient(160deg, #60A5FA, #2563EB)' : '#ffffff',
+        shadow: d.today ? '0 8px 18px rgba(37,99,235,0.35)' : 'none',
+        numColor: d.today ? '#ffffff' : '#1C2430',
+        labColor: d.today ? 'rgba(255,255,255,0.8)' : '#9AA3B0',
+        dot: d.run ? (d.today ? '#ffffff' : '#F97316') : (d.plan ? '#BFD7FB' : 'transparent'),
+        onTap: d.runId ? () => this.setState({ tabC: 'history', runC: d.runId }) : () => {},
+      })),
+      timelineC: [
+        { date: '今天', dotColor: '#2563EB', dotRing: 'rgba(37,99,235,0.18)', icon: 'ti-run', iconBg: '#DBEAFE', iconColor: '#2563EB', title: '輕鬆跑 5K', sub: 'AI 課表・心率 Z2・約 30 分' },
+        { date: '7/17', dotColor: '#F97316', dotRing: 'rgba(249,115,22,0.18)', icon: 'ti-bolt', iconBg: '#FFE9D6', iconColor: '#F97316', title: '間歇 6 × 400m', sub: 'AI 課表・Z4・組間慢跑 200m' },
+        { date: '7/19', dotColor: '#EA5B23', dotRing: 'rgba(234,91,35,0.18)', icon: 'ti-mountain', iconBg: '#FFE4CC', iconColor: '#EA5B23', title: '長距離跑 14K', sub: 'AI 課表・Z2-Z3・週末長課' },
+      ],
+      monthKm,
+      monthCount: monthRuns.length,
+      totalCount: RUNS.length,
+      histPageLabel: (histPage + 1) + ' / ' + histPages,
+      prevColor: histPage === 0 ? '#D5DAE1' : '#1C2430',
+      nextColor: histPage >= histPages - 1 ? '#D5DAE1' : '#1C2430',
+      prevPage: () => this.setState({ histPage: Math.max(0, (this.state.histPage ?? 0) - 1) }),
+      nextPage: () => this.setState({ histPage: Math.min(histPages - 1, (this.state.histPage ?? 0) + 1) }),
+      runsC: RUNS.slice(histPage * 6, histPage * 6 + 6).map((r) => ({
+        ...runRow((id) => ({ tabC: 'history', runC: id }))(r),
+        iconBg: ICON_C[r.type].bg,
+        iconColor: ICON_C[r.type].color,
+      })),
+      dC: rC ? { type: rC.type, date: rC.date, distanceKm: rC.distanceKm, pace: rC.pace, durationMin: rC.durationMin, avgHeartRate: rC.hr, maxHeartRate: rC.maxHr, cadence: rC.cadence, strideM: rC.stride, feedback: rC.feedback } : {},
+      zonesC: ZONES.map((z, i) => ({ ...z, color: ZONE_C[i], widthPct: z.percent + '%', detail: z.minutes + '分・' + z.percent + '%' })),
+      splitsC: SPLITS.map((s) => ({ ...s, barPct: Math.round((maxSec - s.sec + 30) / 60 * 100) + '%' })),
+      loadBarsC: LOAD.map((v) => ({ height: Math.max((v / maxLoad) * 100, 4) + '%', color: v === maxLoad ? '#F97316' : '#93B8F8' })),
+      msgsC: this.state.msgsC.map((m) => ({
+        text: m.text,
+        align: m.from === 'coach' ? 'flex-start' : 'flex-end',
+        bg: m.from === 'coach' ? '#ffffff' : 'linear-gradient(135deg, #60A5FA, #2563EB)',
+        color: m.from === 'coach' ? '#2A3442' : '#ffffff',
+        blr: m.from === 'coach' ? '6px' : '20px',
+        brr: m.from === 'coach' ? '20px' : '6px',
+      })),
+      inputC: this.state.inputC,
+      onInputC: (e) => this.setState({ inputC: e.target.value }),
+      onKeyC: (e) => { if (e.key === 'Enter' && this.state.inputC.trim()) this.askC(this.state.inputC.trim()); },
+      onSendC: () => { if (this.state.inputC.trim()) this.askC(this.state.inputC.trim()); },
+      askLoadC: () => this.askC('分析我這週的訓練負荷'),
+      askZonesC: () => this.askC('我這週的心率區間分佈如何'),
+      settingsRows: [
+        { icon: 'ti-user', label: '帳號', value: 'sasha@velosays.app' },
+        { icon: 'ti-device-watch', label: 'Garmin 連結', value: '已連結' },
+        { icon: 'ti-target', label: '週跑量目標', value: `${goal} km` },
+        { icon: 'ti-bell', label: '通知', value: '開啟' },
+      ],
+    };
+  }
+}
+</script>
+</body>
+</html>

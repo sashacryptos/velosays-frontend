@@ -11,9 +11,9 @@ import {
   askCoach,
   toRunSummary,
   toRunDetail,
-  toWeeklyProgress,
+  weeklyKmFromRows,
   monthlyKm,
-  overallAvgPace,
+  monthlyRunCount,
   weeklyLoadFromRows,
   type ActivityRow,
   type DailyMetricsRow,
@@ -69,10 +69,7 @@ function App() {
     setSyncing(true);
     setSyncMessage(null);
     try {
-      const [data, metricsRow] = await Promise.all([
-        fetchActivities(USER_ID),
-        fetchLatestMetrics(USER_ID),
-      ]);
+      const [data, metricsRow] = await Promise.all([fetchActivities(USER_ID), fetchLatestMetrics(USER_ID)]);
       setRows(data);
       setDailyMetrics(metricsRow);
       setSyncMessage('已更新最新資料');
@@ -102,6 +99,16 @@ function App() {
     }
   };
 
+  const handleTabChange = (tab: NavTab) => {
+    setSelectedRunId(null);
+    setActiveTab(tab);
+  };
+
+  const handleSelectRun = (id: string) => {
+    setActiveTab('history');
+    setSelectedRunId(id);
+  };
+
   const runs = rows.map(toRunSummary);
   const weeklyLoad = weeklyLoadFromRows(rows);
 
@@ -113,118 +120,77 @@ function App() {
     weeklyLoad,
   };
 
-  const errorBanner = (
-    <>
-      {loadError && (
-        <div className="w-full max-w-md md:max-w-lg mx-auto mb-2 bg-red-50 text-red-700 text-xs rounded-lg px-3 py-2">
-          無法連線資料庫，目前顯示空資料：{loadError}
-        </div>
-      )}
-      {syncMessage && (
-        <div
-          className={`w-full max-w-md md:max-w-lg mx-auto mb-2 text-xs rounded-lg px-3 py-2 ${
-            syncMessage.includes('失敗') ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'
-          }`}
-        >
-          {syncMessage}
-        </div>
-      )}
-    </>
-  );
-
   let screen;
   if (loading) {
     screen = (
-      <div className="flex h-[60vh] items-center justify-center">
-        <p className="text-sm text-gray-400 animate-pulse">正在載入最新跑步紀錄...</p>
+      <div className="flex-1 flex items-center justify-center">
+        <p className="text-sm text-[#9AA3B0] animate-pulse">正在載入最新跑步紀錄...</p>
       </div>
     );
   } else if (selectedRunId && rows.some((r) => r.id === selectedRunId)) {
     const row = rows.find((r) => r.id === selectedRunId)!;
-    screen = (
-      <RunDetail
-        activeTab={activeTab}
-        onTabChange={(tab) => {
-          setSelectedRunId(null);
-          setActiveTab(tab);
-        }}
-        run={toRunDetail(row)}
-        onBack={() => setSelectedRunId(null)}
-      />
-    );
+    screen = <RunDetail run={toRunDetail(row)} onBack={() => setSelectedRunId(null)} />;
   } else {
     switch (activeTab) {
       case 'dashboard':
         screen = (
-          <>
-            {errorBanner}
-            <Dashboard
-              activeTab={activeTab}
-              onTabChange={setActiveTab}
-              weekly={toWeeklyProgress(rows)}
-              weeklyGoalKm={WEEKLY_GOAL_KM}
-              latestRun={runs[0]}
-              vo2max={dailyMetrics?.vo2max ?? undefined}
-              restingHeartRate={dailyMetrics?.resting_hr ?? undefined}
-              sleepScore={dailyMetrics?.sleep_score ?? undefined}
-              onViewPlan={() => setActiveTab('coach')}
-              onSync={handleSync}
-              syncing={syncing}
-            />
-          </>
+          <Dashboard
+            runs={runs}
+            weeklyKm={weeklyKmFromRows(rows)}
+            weeklyGoalKm={WEEKLY_GOAL_KM}
+            vo2max={dailyMetrics?.vo2max ?? undefined}
+            onTabChange={handleTabChange}
+            onSelectRun={handleSelectRun}
+            onSync={handleSync}
+            syncing={syncing}
+            loadError={loadError}
+            syncMessage={syncMessage}
+          />
         );
         break;
       case 'history':
         screen = (
-          <>
-            {errorBanner}
-            <HistoryList
-              activeTab={activeTab}
-              onTabChange={setActiveTab}
-              runs={runs}
-              monthlyKm={Math.round(monthlyKm(rows) * 10) / 10}
-              avgPace={overallAvgPace(rows)}
-              onSelectRun={setSelectedRunId}
-              onBack={() => setActiveTab('dashboard')}
-            />
-          </>
+          <HistoryList
+            runs={runs}
+            monthlyKm={Math.round(monthlyKm(rows) * 10) / 10}
+            monthlyCount={monthlyRunCount(rows)}
+            totalCount={rows.length}
+            onSelectRun={handleSelectRun}
+            onBack={() => handleTabChange('dashboard')}
+          />
         );
         break;
       case 'coach':
-        screen = (
-          <Coach
-            activeTab={activeTab}
-            onTabChange={setActiveTab}
-            messages={messages}
-            onAsk={handleAsk}
-            sending={asking}
-          />
-        );
+        screen = <Coach messages={messages} onAsk={handleAsk} sending={asking} />;
         break;
       case 'fitness':
-        screen = (
-          <FitnessStatus
-            activeTab={activeTab}
-            onTabChange={setActiveTab}
-            metrics={fitnessMetrics}
-          />
-        );
+        screen = <FitnessStatus metrics={fitnessMetrics} />;
         break;
       case 'settings':
         screen = (
-          <div className="w-full max-w-md md:max-w-lg mx-auto bg-white rounded-2xl shadow-sm p-3 sm:p-4 flex flex-col gap-2.5">
-            <div className="px-1.5 pt-1 pb-0.5">
-              <h2 className="text-lg font-medium">設定</h2>
-              <p className="text-xs text-gray-400 mt-0.5">此頁面尚未實作</p>
+          <div className="flex-1 overflow-y-auto px-5 pt-14 pb-[108px]">
+            <div className="bg-white rounded-3xl px-[18px] py-4">
+              <h2 className="m-0 text-lg font-medium text-[#1C2430]">設定</h2>
+              <p className="mt-0.5 mb-0 text-xs text-[#9AA3B0]">此頁面尚未實作</p>
             </div>
-            <BottomNav active={activeTab} onChange={setActiveTab} />
           </div>
         );
         break;
     }
   }
 
-  return <div className="min-h-screen bg-gray-100 px-3 py-4 sm:py-8">{screen}</div>;
+  return (
+    <div
+      className="w-full max-w-[430px] mx-auto h-dvh overflow-hidden flex flex-col relative"
+      style={{
+        background: 'linear-gradient(170deg, #E8F1FF 0%, #F7F9FF 45%, #FFF0E2 100%)',
+        boxShadow: '0 0 60px rgba(28,36,48,0.10)',
+      }}
+    >
+      {screen}
+      <BottomNav active={selectedRunId ? 'history' : activeTab} onChange={handleTabChange} />
+    </div>
+  );
 }
 
 export default App;

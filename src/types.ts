@@ -3,6 +3,7 @@ export type NavTab = 'dashboard' | 'history' | 'coach' | 'fitness' | 'settings';
 export interface RunSummary {
   id: string;
   date: string;
+  isoDate: string;
   type: '輕鬆跑' | '長距離跑' | '配速跑' | '恢復跑' | '間歇跑';
   distanceKm: number;
   paceMinPerKm: string;
@@ -36,11 +37,6 @@ export interface RunDetail extends RunSummary {
   zones?: HeartRateZone[];
   splits?: Split[];
   coachFeedback?: string;
-}
-
-export interface WeeklyProgress {
-  dayLabel: string;
-  distanceKm: number;
 }
 
 export interface FitnessMetrics {

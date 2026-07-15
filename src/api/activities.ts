@@ -1,5 +1,5 @@
 import { supabase } from '../supabaseClient';
-import type { RunSummary, RunDetail, WeeklyProgress } from '../types';
+import type { RunSummary, RunDetail } from '../types';
 
 // GAS 後端：strava_chat AI 教練（2026-07-15 的新部署）。
 // 活動資料改由 GitHub Actions 每日直連 Garmin 同步（見 scripts/sync_garmin.py），
@@ -123,6 +123,7 @@ export function toRunSummary(row: ActivityRow): RunSummary {
   return {
     id: row.id,
     date: formatDateZh(row.date),
+    isoDate: row.date,
     type: inferRunType(row),
     distanceKm: Number(row.distance) || 0,
     paceMinPerKm: row.pace || paceFromDuration(row.duration, row.distance),
@@ -144,22 +145,50 @@ export function toRunDetail(row: ActivityRow): RunDetail {
 
 const DAY_LABELS = ['一', '二', '三', '四', '五', '六', '日'];
 
-// 本週（週一起算）每日跑量
-export function toWeeklyProgress(rows: ActivityRow[]): WeeklyProgress[] {
+function mondayOfCurrentWeek(): Date {
   const now = new Date();
   const monday = new Date(now);
   monday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
   monday.setHours(0, 0, 0, 0);
+  return monday;
+}
 
-  const week = DAY_LABELS.map((dayLabel) => ({ dayLabel, distanceKm: 0 }));
-  for (const row of rows) {
+// 本週（週一起算）累積跑量
+export function weeklyKmFromRows(rows: ActivityRow[]): number {
+  const monday = mondayOfCurrentWeek();
+  return rows.reduce((sum, row) => {
     const d = new Date(row.date);
     const dayIndex = Math.floor((d.getTime() - monday.getTime()) / 86400000);
-    if (dayIndex >= 0 && dayIndex < 7) {
-      week[dayIndex].distanceKm += Number(row.distance) || 0;
-    }
-  }
-  return week;
+    return dayIndex >= 0 && dayIndex < 7 ? sum + (Number(row.distance) || 0) : sum;
+  }, 0);
+}
+
+export interface WeekStripDay {
+  dateNum: number;
+  dayLabel: string;
+  isToday: boolean;
+  runId?: string;
+}
+
+// 本週（週一起算）每日卡片：今日標記、當天第一筆跑步的 id（用於點擊跳轉詳情）
+export function weekStripFromRuns(runs: RunSummary[]): WeekStripDay[] {
+  const now = new Date();
+  const monday = mondayOfCurrentWeek();
+
+  return DAY_LABELS.map((dayLabel, i) => {
+    const day = new Date(monday);
+    day.setDate(monday.getDate() + i);
+    const match = runs.find((r) => {
+      const d = new Date(r.isoDate);
+      return d.getFullYear() === day.getFullYear() && d.getMonth() === day.getMonth() && d.getDate() === day.getDate();
+    });
+    return {
+      dateNum: day.getDate(),
+      dayLabel,
+      isToday: day.toDateString() === now.toDateString(),
+      runId: match?.id,
+    };
+  });
 }
 
 export function monthlyKm(rows: ActivityRow[]): number {
@@ -170,6 +199,14 @@ export function monthlyKm(rows: ActivityRow[]): number {
       return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
     })
     .reduce((sum, row) => sum + (Number(row.distance) || 0), 0);
+}
+
+export function monthlyRunCount(rows: ActivityRow[]): number {
+  const now = new Date();
+  return rows.filter((row) => {
+    const d = new Date(row.date);
+    return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+  }).length;
 }
 
 export function overallAvgPace(rows: ActivityRow[]): string {
