@@ -1,9 +1,9 @@
 import { supabase } from '../supabaseClient';
 import type { RunSummary, RunDetail, WeeklyProgress } from '../types';
 
-// GAS 後端：接收 sync_activities 後抓 Strava 活動寫入 Supabase
+// GAS 後端：sync_activities 同步 + strava_chat AI 教練（2026-07-15 的新部署）
 const SYNC_ENDPOINT =
-  'https://script.google.com/macros/s/AKfycbz-wLhGygelhCBg44bfylb9AR3TmFwUXJ6H2U1pKQ2soONw3YYZQvjKbHh4r1T9LuDw/exec';
+  'https://script.google.com/macros/s/AKfycbzz86Yy5aHgfROz5zdi7G0O_x8L3uxcl0pZBTjKU_Ud9nRf1AzPMNJaKBMbsDGSyQrR/exec';
 
 interface SyncResult {
   status: string;
