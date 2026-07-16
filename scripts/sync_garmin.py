@@ -55,7 +55,29 @@ HEADERS = {
 
 
 def garmin_login() -> Garmin:
-    """優先用 GARMINTOKENS token 字串登入（CI 唯一可靠路徑），否則本機帳密備援。"""
+    """登入策略（由快到慢，優先避免打到 OAuth2 換發端點）：
+    1. TOKEN_DIR 有 actions/cache 從上次執行留下的 session，且 oauth2 還沒過期 → 直接用，完全不打換發端點
+    2. 上面失敗 → 用 GARMINTOKENS 字串登入（會觸發一次換發），成功後立刻把新 session 存回 TOKEN_DIR，
+       讓下次執行（尤其是短時間內的手動測試）有機會走路徑 1，不必每次都重新換發
+    3. 都沒有 → 本機帳密備援登入
+
+    背景：garth 的 GARMINTOKENS 字串是產生當下的一次性快照，oauth2 access token 效期約 1 小時，
+    過了就一定要重新換發。過去每次執行都固定從這把「早就過期」的字串重載，等於每次都要換發一次；
+    密集手動測試時會在短時間內狂打同一個 OAuth2 端點，很可能就是觸發 429 的原因。
+    """
+    client = Garmin()
+    garth_client = getattr(client, "garth", None)
+
+    if garth_client is not None and os.path.exists(TOKEN_DIR):
+        try:
+            garth_client.load(TOKEN_DIR)
+            if garth_client.oauth2_token and not garth_client.oauth2_token.expired:
+                print("使用快取的 Garmin session（TOKEN_DIR）登入成功，跳過 OAuth2 換發")
+                return client
+            print("快取的 oauth2 token 已過期，改用 GARMINTOKENS 重新換發")
+        except Exception as e:
+            print(f"讀取快取 session 失敗，改用 GARMINTOKENS: {e}")
+
     tokens = os.environ.get("GARMINTOKENS")
     if tokens:
         client = Garmin()
@@ -67,6 +89,11 @@ def garmin_login() -> Garmin:
             # garminconnect 0.3.x：token 是 di_token JSON，格式與 0.2.x 不相容
             client.login(tokens)
         print("使用 GARMINTOKENS 登入成功")
+        try:
+            (garth_client or client.client).dump(TOKEN_DIR)
+            print("已將 session 存回", TOKEN_DIR, "供下次執行快取使用")
+        except Exception as e:
+            print(f"session 快取寫入失敗（不影響本次同步）: {e}")
         return client
 
     email = os.environ.get("GARMIN_EMAIL")

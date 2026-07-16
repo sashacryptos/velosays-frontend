@@ -25,8 +25,16 @@ jobs:
       # di_token 格式）。若升級，token 需用新版重新產生。
       - run: pip install "garminconnect==0.2.8" requests
 
-      # CI 只用 GARMINTOKENS 登入：Garmin 對雲端 IP 的帳密登入一律回 429。
-      # token 由本機執行 scripts/garmin_login.py 產生，效期約一年。
+      # 快取 Garmin OAuth session：避免每次執行都重新打 OAuth2 換發端點
+      # （該端點對頻繁請求很敏感，過去每次都用過期的 GARMINTOKENS 重新換發，
+      # 密集手動測試時很容易在短時間內連續命中同一端點觸發限流）。
+      # key 帶 run_id 讓每次執行都能存新版本，restore-keys 撈最近一次的快取。
+      - uses: actions/cache@v4
+        with:
+          path: ~/.garminconnect
+          key: garmin-session-${{ github.run_id }}
+          restore-keys: garmin-session-
+
       - run: python scripts/sync_garmin.py
         env:
           GARMINTOKENS: ${{ secrets.GARMINTOKENS }}
