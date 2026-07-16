@@ -31,6 +31,14 @@ def main() -> None:
     garth_client = getattr(client, "garth", None) or client.client
     tokens = garth_client.dumps()
 
+    # 同時存一份到本機 token 目錄，讓 sync_garmin.py 可以直接在本機 resume 執行
+    token_dir = os.path.expanduser("~/.garminconnect")
+    try:
+        garth_client.dump(token_dir)
+        print(f"token 已存到 {token_dir}（本機執行 sync_garmin.py 會自動使用）")
+    except Exception as e:
+        print(f"本機 token 目錄寫入失敗（不影響下方字串）: {e}")
+
     print("\n登入成功！把下面整串貼到 GitHub secret `GARMINTOKENS`：\n")
     print(tokens)
 
