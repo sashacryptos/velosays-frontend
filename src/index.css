@@ -21,3 +21,11 @@ body {
 p {
   margin: 0;
 }
+
+/* 對應設計稿的 [data-screen-label] > * { flex-shrink: 0 }：
+   各分頁是「固定高度的 flex column + overflow-y-auto」，內容一旦比視窗高，
+   flex 會先壓縮子元素（例如日曆條被壓成一條細線）才輪到捲動；
+   鎖住 shrink 讓內容保持原高、改由捲動處理。 */
+.flex-1.overflow-y-auto > * {
+  flex-shrink: 0;
+}

@@ -13,6 +13,8 @@ sync_garmin.py — 直接從 Garmin Connect 拉跑步活動寫入 Supabase activ
   FORCE_MONTHLY_GOAL              — 選填，設為 "1" 時無視「月底」限制強制生成當月目標（補跑用）
 """
 
+from __future__ import annotations
+
 import json
 import os
 import sys
