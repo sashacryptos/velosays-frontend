@@ -1,9 +1,10 @@
 name: Garmin Sync
 
+# 2026-07-20 起每日排程停用：Garmin 已對 GitHub 機房 IP 的 OAuth 換發端點
+# 持續回 429（連每天一次都擋，非用量問題），排程改由使用者 Mac 上的 launchd
+# 執行（scripts/local_sync.sh，每日 07:30）。保留手動觸發以備 Garmin 解除封鎖
+# 後測試用；若確認解封可還原 cron：'0 22 * * *'（= 台北 06:00）。
 on:
-  schedule:
-    # 每天 22:00 UTC = 台北 06:00
-    - cron: "0 22 * * *"
   workflow_dispatch:
     inputs:
       force_monthly_goal:
