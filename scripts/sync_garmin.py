@@ -76,9 +76,16 @@ def garmin_login() -> Garmin:
             if garth_client.oauth2_token and not garth_client.oauth2_token.expired:
                 print("使用快取的 Garmin session（TOKEN_DIR）登入成功，跳過 OAuth2 換發")
                 return client
-            print("快取的 oauth2 token 已過期，改用 GARMINTOKENS 重新換發")
+            # oauth2 過期但 oauth1（效期約一年）還在：直接用 oauth1 換發一次新 oauth2，
+            # 不必依賴 GARMINTOKENS（那把裡面的 oauth2 幾乎必然也過期，殊途同歸）。
+            if garth_client.oauth1_token:
+                print("快取的 oauth2 已過期，改用快取的 oauth1 重新換發...")
+                garth_client.refresh_oauth2()
+                garth_client.dump(TOKEN_DIR)
+                print("換發成功，新 session 已存回快取")
+                return client
         except Exception as e:
-            print(f"讀取快取 session 失敗，改用 GARMINTOKENS: {e}")
+            print(f"快取 session 無法使用，改用 GARMINTOKENS: {e}")
 
     tokens = os.environ.get("GARMINTOKENS")
     if tokens:
@@ -214,18 +221,17 @@ def is_duplicate(row: dict, existing: list[dict]) -> bool:
 
 def fetch_weather(client: Garmin, activity_id: str) -> dict:
     """回傳 city/temperature_c/humidity_percent；抓不到就回空字典，不影響活動本身寫入。
-    Garmin 回傳欄位名稱是依社群已知的 activity weather 端點形狀推測，
-    第一次成功呼叫會印出完整原始回應，方便之後校正欄位對應。"""
+    欄位對應已用 2026-07-20 的真實回應校正：temp 是「華氏」（實測台北七月回傳 81/89°F），
+    relativeHumidity 是百分比整數，weatherStationDTO.name 是觀測站/城市名。"""
     try:
         weather = client.get_activity_weather(activity_id)
         if not weather:
             return {}
-        print(f"  (原始天氣資料，供欄位校正參考): {json.dumps(weather, ensure_ascii=False)[:500]}")
 
         result: dict = {}
-        temp = weather.get("temp")
-        if temp is not None:
-            result["temperature_c"] = round(float(temp), 1)
+        temp_f = weather.get("temp")
+        if temp_f is not None:
+            result["temperature_c"] = round((float(temp_f) - 32) * 5 / 9, 1)
         humidity = weather.get("relativeHumidity")
         if humidity is not None:
             result["humidity_percent"] = int(humidity)
