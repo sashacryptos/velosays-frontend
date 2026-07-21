@@ -132,62 +132,132 @@ def ensure_profile(client: Garmin) -> None:
         print(f"讀取 profile 失敗（略過需要 display_name 的指標）: {e}")
 
 
-def fetch_daily_metrics(client: Garmin) -> dict | None:
-    """拉當日體能指標；個別失敗不影響其他項目。"""
-    today = today_taipei().isoformat()
-    metrics: dict = {"user_id": USER_ID, "date": today}
+# 每次同步往回檢查這麼多天的體能指標，補齊缺漏（涵蓋電腦臨時沒開、
+# 或早上跑排程時 Garmin 當天資料還沒算好的情況）。窗口小、只補缺的，
+# 不會對 Garmin 造成大量請求。
+BACKFILL_DAYS = 7
+
+
+def _read_resting_hr(client: Garmin, day: str):
+    rhr = client.get_rhr_day(day)
+    values = (
+        ((rhr or {}).get("allMetrics") or {}).get("metricsMap") or {}
+    ).get("WELLNESS_RESTING_HEART_RATE") or []
+    if values and values[0].get("value"):
+        return int(values[0]["value"])
+    return None
+
+
+def _read_sleep_score(client: Garmin, day: str):
+    sleep = client.get_sleep_data(day)
+    return (
+        (((sleep or {}).get("dailySleepDTO") or {}).get("sleepScores") or {})
+        .get("overall") or {}
+    ).get("value")
+
+
+def _vo2max_by_date(client: Garmin) -> dict:
+    """回傳 {calendarDate: vo2max}。VO2max 只在有跑步的日子有值。"""
+    out: dict = {}
+    try:
+        start = (today_taipei() - timedelta(days=35)).isoformat()
+        today = today_taipei().isoformat()
+        garth_client = getattr(client, "garth", None) or client.client
+        mm = garth_client.connectapi(f"/metrics-service/metrics/maxmet/daily/{start}/{today}")
+        for entry in mm or []:
+            generic = (entry or {}).get("generic") or {}
+            cal = generic.get("calendarDate")
+            vo2 = generic.get("vo2MaxPreciseValue") or generic.get("vo2MaxValue")
+            if cal and vo2:
+                out[cal] = float(vo2)
+    except Exception as e:
+        print(f"VO2max 範圍查詢失敗: {e}")
+    return out
+
+
+def _fetch_existing_metrics(days: int) -> dict:
+    """回傳最近 days 天已存在的 daily_metrics：{date: row}。"""
+    start = (today_taipei() - timedelta(days=days)).isoformat()
+    res = requests.get(
+        f"{SUPABASE_URL}/rest/v1/daily_metrics",
+        params={
+            "user_id": f"eq.{USER_ID}",
+            "date": f"gte.{start}",
+            "select": "date,vo2max,resting_hr,sleep_score",
+        },
+        headers=HEADERS,
+        timeout=30,
+    )
+    res.raise_for_status()
+    return {r["date"]: r for r in res.json()}
+
+
+def sync_daily_metrics(client: Garmin) -> None:
+    """補齊最近 BACKFILL_DAYS 天的體能指標：只處理缺漏或不完整的日期。
+    - vo2max：帶前一次已知值往後填（VO2max 只在跑步日更新，非跑步日沿用最近值）
+    - resting_hr / sleep_score：抓該日實際值
+    - 今日睡眠分數常尚未產生 → 退回抓昨日（睡眠分數本就是前一晚的品質）
+    """
+    ensure_profile(client)
+    if not getattr(client, "display_name", None):
+        print("無 display_name，略過體能指標（睡眠/安靜心率 API 需要）")
+        return
 
     try:
-        # VO2max 只在有跑步的日子有值，往回抓 30 天取最近一筆
-        start = (today_taipei() - timedelta(days=30)).isoformat()
-        garth_client = getattr(client, "garth", None) or client.client
-        mm = garth_client.connectapi(
-            f"/metrics-service/metrics/maxmet/daily/{start}/{today}"
-        )
-        for entry in reversed(mm or []):
-            generic = (entry or {}).get("generic") or {}
-            vo2 = generic.get("vo2MaxPreciseValue") or generic.get("vo2MaxValue")
-            if vo2:
-                metrics["vo2max"] = float(vo2)
-                break
+        existing = _fetch_existing_metrics(BACKFILL_DAYS)
     except Exception as e:
-        print(f"VO2max 取得失敗: {e}")
+        print(f"讀取現有 daily_metrics 失敗，改只補今天: {e}")
+        existing = {}
 
-    ensure_profile(client)
-    if getattr(client, "display_name", None):
-        try:
-            rhr = client.get_rhr_day(today)
-            values = (
-                ((rhr or {}).get("allMetrics") or {}).get("metricsMap") or {}
-            ).get("WELLNESS_RESTING_HEART_RATE") or []
-            if values and values[0].get("value"):
-                metrics["resting_hr"] = int(values[0]["value"])
-        except Exception as e:
-            print(f"安靜心率取得失敗: {e}")
+    vo2_map = _vo2max_by_date(client)
+    today = today_taipei()
 
-        # 睡眠分數：早上排程執行時（07:30），Garmin 常還沒算好「今天」的睡眠分數，
-        # 因此先試今天、抓不到就退回抓昨天。語意上這也更正確——睡眠分數本來就是
-        # 前一晚的睡眠品質，對應到前一天日期反而是它原本的意義。
-        def read_sleep_score(day: str):
-            sleep = client.get_sleep_data(day)
-            return (
-                (((sleep or {}).get("dailySleepDTO") or {}).get("sleepScores") or {})
-                .get("overall") or {}
-            ).get("value")
+    # 依日期升序建立 vo2max 沿用值（carry-forward）
+    def vo2_for(day_iso: str):
+        candidates = [d for d in vo2_map if d <= day_iso]
+        return vo2_map[max(candidates)] if candidates else None
 
-        try:
-            yesterday = (today_taipei() - timedelta(days=1)).isoformat()
-            score = read_sleep_score(today)
-            if not score:
-                score = read_sleep_score(yesterday)
+    for offset in range(BACKFILL_DAYS, -1, -1):
+        day = (today - timedelta(days=offset)).isoformat()
+        row = existing.get(day, {})
+        # 已三項齊全就跳過，不重抓
+        if row and row.get("vo2max") and row.get("resting_hr") and row.get("sleep_score"):
+            continue
+
+        metrics: dict = {"user_id": USER_ID, "date": day}
+
+        vo2 = row.get("vo2max") or vo2_for(day)
+        if vo2:
+            metrics["vo2max"] = vo2
+
+        if not row.get("resting_hr"):
+            try:
+                rhr = _read_resting_hr(client, day)
+                if rhr:
+                    metrics["resting_hr"] = rhr
+            except Exception as e:
+                print(f"{day} 安靜心率取得失敗: {e}")
+        else:
+            metrics["resting_hr"] = row["resting_hr"]
+
+        if not row.get("sleep_score"):
+            try:
+                score = _read_sleep_score(client, day)
+                # 今天的睡眠分數常還沒算好 → 退抓昨天
+                if not score and day == today.isoformat():
+                    y = (today - timedelta(days=1)).isoformat()
+                    score = _read_sleep_score(client, y)
+                    if score:
+                        print(f"今日睡眠分數尚未產生，改用昨日（{y}）的分數")
                 if score:
-                    print(f"今日睡眠分數尚未產生，改用昨日（{yesterday}）的分數")
-            if score:
-                metrics["sleep_score"] = int(score)
-        except Exception as e:
-            print(f"睡眠分數取得失敗: {e}")
+                    metrics["sleep_score"] = int(score)
+            except Exception as e:
+                print(f"{day} 睡眠分數取得失敗: {e}")
+        else:
+            metrics["sleep_score"] = row["sleep_score"]
 
-    return metrics if len(metrics) > 2 else None
+        if len(metrics) > 2:
+            upsert_daily_metrics(metrics)
 
 
 def upsert_daily_metrics(metrics: dict) -> None:
@@ -416,9 +486,7 @@ def maybe_generate_monthly_goal() -> None:
 def main() -> None:
     client = garmin_login()
 
-    metrics = fetch_daily_metrics(client)
-    if metrics:
-        upsert_daily_metrics(metrics)
+    sync_daily_metrics(client)
 
     start = (today_taipei() - timedelta(days=LOOKBACK_DAYS)).isoformat()
     end = today_taipei().isoformat()
