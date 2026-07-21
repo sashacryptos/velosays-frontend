@@ -165,12 +165,23 @@ def fetch_daily_metrics(client: Garmin) -> dict | None:
         except Exception as e:
             print(f"安靜心率取得失敗: {e}")
 
-        try:
-            sleep = client.get_sleep_data(today)
-            score = (
+        # 睡眠分數：早上排程執行時（07:30），Garmin 常還沒算好「今天」的睡眠分數，
+        # 因此先試今天、抓不到就退回抓昨天。語意上這也更正確——睡眠分數本來就是
+        # 前一晚的睡眠品質，對應到前一天日期反而是它原本的意義。
+        def read_sleep_score(day: str):
+            sleep = client.get_sleep_data(day)
+            return (
                 (((sleep or {}).get("dailySleepDTO") or {}).get("sleepScores") or {})
                 .get("overall") or {}
             ).get("value")
+
+        try:
+            yesterday = (today_taipei() - timedelta(days=1)).isoformat()
+            score = read_sleep_score(today)
+            if not score:
+                score = read_sleep_score(yesterday)
+                if score:
+                    print(f"今日睡眠分數尚未產生，改用昨日（{yesterday}）的分數")
             if score:
                 metrics["sleep_score"] = int(score)
         except Exception as e:
